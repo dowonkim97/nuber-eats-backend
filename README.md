@@ -32,7 +32,7 @@
 
 - github.com/new (새로운 repository 생성)
 - git init(vscode 터미널)
-- git remote origin add https://github.com/dowonkim97/nuber-eats-backend
+- git remote add origin https://github.com/dowonkim97/nuber-eats-backend
 
 - gitignore (확장프로그램 이미 설치됨)
 - 명령 팔레트 (윈도우 기준 ctrl + shift + P)
