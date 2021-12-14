@@ -36,7 +36,8 @@
 
 - gitignore (확장프로그램 이미 설치됨)
 - 명령 팔레트 (윈도우 기준 ctrl + shift + P)
-- > Add gitignore
-- node
-- git add .
-- git commit -m "#0.6"
+- > Add gitignore (명령 팔레트)
+- node (명령 팔레트)
+
+- git add . (vscode 터미널)
+- git commit -m "#0.6" (vscode 터미널)
