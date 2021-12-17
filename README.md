@@ -46,6 +46,7 @@
 
 - https://docs.nestjs.com/graphql/quick-start (internet 검색)
 - npm i @nestjs/graphql graphql@^15 apollo-server-express (vscode 터미널)
+- npm i apollo-server-core (vscode 터미널)
 - app.module은 main.ts로 import되는 유일한 모듈이다.
 
 - Code first와 Schema first 두 옵션이 있다.
@@ -54,12 +55,16 @@
   번거롭기 때문에 Code first로 진행한다.
 - Code first는 자동으로 schema를 생성한다.
 
+- Error: Apollo Server requires either an existing schema, modules or typeDefs
 - https://docs.nestjs.com/graphql/quick-start#code-first
 - app.module.ts forRoot안에
   "autoSchemaFile: join(process.cwd(), 'src/schema.gql'),"
-  를 넣는다.
-
+  를 넣는다. join import 해준다.
 - nest g mo restaurants
+  모듈을 만들어준다.
+
+- restaurants.module.ts에는 @Module에 providers: [RestaurantsResolver],
+  를 넣어줘야 한다. 그렇지 않으면 Query root type must be provided. 에러가 발생한다.
 
 - restaurants.resolver 생성하고 @Resolver
   '@nestjs/graphql'에서 자동으로 가져오기
