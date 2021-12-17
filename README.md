@@ -16,7 +16,7 @@
 
 # 강의에서 배운 것들만 기록
 
-# 0.6
+# #0.6
 
 - nest (cmd)
 - nest g application (cmd)
@@ -41,3 +41,51 @@
 
 - git add . (vscode 터미널)
 - git commit -m "#0.6" (vscode 터미널)
+
+# #1
+
+- https://docs.nestjs.com/graphql/quick-start (internet 검색)
+- npm i @nestjs/graphql graphql@^15 apollo-server-express (vscode 터미널)
+- app.module은 main.ts로 import되는 유일한 모듈이다.
+
+- Code first와 Schema first 두 옵션이 있다.
+- Schema first는 기본적으로 forRoot가 주어진다.
+  .graphql 파일을 작성해야 해야 한다. (.typescript 파일도 만들어야 한다.)
+  번거롭기 때문에 Code first로 진행한다.
+- Code first는 자동으로 schema를 생성한다.
+
+- https://docs.nestjs.com/graphql/quick-start#code-first
+- app.module.ts forRoot안에
+  "autoSchemaFile: join(process.cwd(), 'src/schema.gql'),"
+  를 넣는다.
+
+- nest g mo restaurants
+
+- restaurants.resolver 생성하고 @Resolver
+  '@nestjs/graphql'에서 자동으로 가져오기
+
+```
+      'prettier/prettier': [
+            'error',
+            {
+                endOfLine: 'auto',
+            },
+        ],
+```
+
+- 매번 추가해줘야 할 것 같다.
+- @Query는 graphql을 import 해야 한다.
+  (첫번째 arg = (), returns => Boolean / typeFunc: ReturnTypeFunc, options?: QueryOptions) typeFunc을 받는다.
+  @Query는 Boolean을 return(반환)해준다.
+
+```
+'@typescript-eslint/no-unused-vars': 'off',
+'@typescript-eslint/ban-types': 'off',
+```
+
+- Boolean 에러가 발생하여 .eslintrc에 추가하였다.
+
+- yarn start하면 schema.gql파일이 생성된다.
+- join(process.cwd(), 'src/schema.gql') -> true로 변경한다.
+  직접 가지고 있지 않아도 되기 때문이다.
+- http://localhost:3000/graphql
