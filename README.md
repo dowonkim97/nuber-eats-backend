@@ -95,10 +95,11 @@
   직접 가지고 있지 않아도 되기 때문이다.
 - http://localhost:3000/graphql
 
-# #2
+# #1.2
 
 - 객체타입(object types)
-- entities 폴더와 restaurants.entity 파일 생성
+- restaurants에 entities 폴더와 restaurants.entity.ts 파일 생성
+- @ObjectType 입력
 
 ```
 // graphql 위한 Boolean은 지우면 안됨
@@ -110,6 +111,7 @@
 ```
 
 - restaurants.resolver.ts 에서 삭제
+
 - nullable은 값형식의 데이터 타입에 Null 값을 넣을수 있도록 해주는 것이다.
 - isGood은 nullable이기 때문에 null이 가능하다. 그렇기 떄문에
   http://localhost:3000/graphql DOCS에서 Boolean에 !가 없다.
@@ -181,3 +183,31 @@ let isNotOk: boolean = new Boolean(true)
 - 위처럼 생성 방식에 차이가 있고 기본적으로 타입스크립트는 소문자를 씁니다.
   GraphQL 데코레이터는 대문자를 요구합니다.
 - entity는 typeDefs와 유사하다.
+
+# #1.3
+
+```
+myRestaurant() {
+    return true;
+  }
+```
+
+- restaurants.resolver.ts에서 변경했다.
+- GraphQL에서 아래와 같이 입력한다.
+
+```
+{
+  restaurants(veganOnly: true) {
+    name
+  }
+}
+```
+
+```
+"message": "Unknown argument \"veganOnly\" on field \"Query.restaurants\".",
+```
+
+- 이렇듯 에러가 발생한다. 그러므로 argument에 직접 요청해야 한다.
+- http://localhost:3000/graphql DOCS arguments veganOnly: Boolean!
+
+- console.log(veganOnly) console 찍어서 확인해보면 true 값이 나온다.
