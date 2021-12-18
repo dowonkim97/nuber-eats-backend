@@ -94,3 +94,90 @@
 - join(process.cwd(), 'src/schema.gql') -> true로 변경한다.
   직접 가지고 있지 않아도 되기 때문이다.
 - http://localhost:3000/graphql
+
+# #2
+
+- 객체타입(object types)
+- entities 폴더와 restaurants.entity 파일 생성
+
+```
+// graphql 위한 Boolean은 지우면 안됨
+  @Query((returns) => Boolean)
+  // typescript 위한 Boolean 지워도 상관없음
+  isGoodKimchi(): Boolean {
+    return true;
+  }
+```
+
+- restaurants.resolver.ts 에서 삭제
+- nullable은 값형식의 데이터 타입에 Null 값을 넣을수 있도록 해주는 것이다.
+- isGood은 nullable이기 때문에 null이 가능하다. 그렇기 떄문에
+  http://localhost:3000/graphql DOCS에서 Boolean에 !가 없다.
+
+```
+{
+  myRestaurant {
+    isGood
+  }
+}
+```
+
+```
+{
+  "data": {
+    "myRestaurant": {
+      "isGood": null
+    }
+  }
+}
+```
+
+```
+{
+  myRestaurant {
+    name
+  }
+}
+```
+
+```
+{
+  "errors": [
+    {
+      "message": "Cannot return null for non-nullable field Restaurant.name.",
+      "locations": [
+        {
+          "line": 3,
+          "column": 5
+        }
+      ],
+      "path": [
+        "myRestaurant",
+        "name"
+      ],
+      "extensions": {
+        "code": "INTERNAL_SERVER_ERROR",
+        "exception": {
+        }
+      }
+    }
+  ],
+  "data": null
+}
+```
+
+- name에서 에러가 발생한다.
+
+- 소문자 boolean Primitive Boolean
+- 대문자 Boolean object wrapper
+
+```
+let isDone: boolean = false
+typeof isDone === 'boolean' // true
+let isOk: Boolean = true
+let isNotOk: boolean = new Boolean(true)
+```
+
+- 위처럼 생성 방식에 차이가 있고 기본적으로 타입스크립트는 소문자를 씁니다.
+  GraphQL 데코레이터는 대문자를 요구합니다.
+- entity는 typeDefs와 유사하다.
