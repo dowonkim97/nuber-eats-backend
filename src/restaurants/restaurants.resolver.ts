@@ -1,4 +1,5 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { createRestaurantDto } from './dtos/create-resturant.dto';
 import { Restaurant } from './entities/restaurants.entity';
 
 // @Resolver가 Restaurant의 Resolver가 됨
@@ -11,7 +12,21 @@ export class RestaurantReslover {
   // 타입스크립트 Restaurant[]
   // @Args('veganOnly')는 GraphQL,  veganOnly는 function
   restaurants(@Args('veganOnly') veganOnly: boolean): Restaurant[] {
-    console.log(veganOnly);
+    // console.log(veganOnly);
     return [];
+  }
+  @Mutation((returns) => Boolean)
+  createRestaurant(
+    /*
+    @Args('name') name: string,
+    @Args('isVegan') isVegan: boolean,
+    @Args('address') address: string,
+    @Args('ownerName') ownerName: string,
+    */
+    @Args() createRestaurantDto: createRestaurantDto,
+  ): boolean {
+    // console.log(createRestaurantInput);
+    console.log(createRestaurantDto);
+    return true;
   }
 }

@@ -192,7 +192,7 @@ myRestaurant() {
   }
 ```
 
-- restaurants.resolver.ts에서 변경했다.
+- restaurants.resolver.ts에서 삭제 변경했다.
 - GraphQL에서 아래와 같이 입력한다.
 
 ```
@@ -207,7 +207,93 @@ myRestaurant() {
 "message": "Unknown argument \"veganOnly\" on field \"Query.restaurants\".",
 ```
 
-- 이렇듯 에러가 발생한다. 그러므로 argument에 직접 요청해야 한다.
+- 이렇듯 에러가 발생한다. 그러므로 argument(@Arg)에 직접 요청해야 한다.
 - http://localhost:3000/graphql DOCS arguments veganOnly: Boolean!
 
 - console.log(veganOnly) console 찍어서 확인해보면 true 값이 나온다.
+
+# #1.4
+
+- 용어 Argument 함수의 변수에 집어넣는 값(입력값)
+
+- @Mutation 생성
+- restaurants.resolver.ts에서 createRestaurant(): boolean return을
+  true로 해준다.
+- http://localhost:3000/graphql DOCS mutations createRestaurant: Boolean!
+- restaurants.entity.ts에 isGood 제거하고,
+  isVegan, address, ownerName @Field 추가
+- restaurants.resolver.ts createRestaurant() 안에
+  @Arg name, isVegan, address, ownerName 넣는다.
+- inputType을 @Args 한개씩이 아니라 class 전체를 전달할 수 있다.
+  일종의 DTO 같다.
+- restaurants에 dtos 폴더를 생성, create-resturant.dto.ts 파일 생성
+- @InputType()과 export class createRestaurantDto 만들고,
+  @Field에 (type => String or Boolean)
+  name, isVegan, address, ownerName에 string or boolean을 넣는다.
+- restaurants.resolver.ts createRestaurant() 괄호안에
+  @Args() createRestaurantInput: createRestaurantDto가 arguments가 된다.
+
+```
+mutation {
+  createRestaurant(createRestaurantInput: {
+    name:""
+  })
+}
+```
+
+- 이렇게 작성하는 것이 별로다.
+- restaurants.resolver.ts에서 @Args() 괄호 안에 'createRestaurantInput'를
+  없앨 수 있지만 에러가 발생한다. argument로써 이름을 가지고 있지 않으면 InputType을 사용할 수 없다.
+- 그렇기 때문에 create-resturant.dto.ts에서
+  InputType에서 ArgsType으로 바꾼다.
+
+- @ArgsType은 분리된 argument로 정의할 수 있게 해준다.
+  하나의 object에 모든 것을 담지 않고,
+  분리된 값들을 GraphQL argument 전달해줄 수 있도록 해준다.
+- ArgsType 사용⭕
+
+```
+  a(
+    @Args() a:ADto,
+  ): boolean {
+    return: true;
+  }
+
+```
+
+- @InputType은 하나의 object, object를 전달해야 한다.
+  argument로써 graphql로 전달하기 위한 용도이다.
+- InputType 사용❌
+
+  ```
+  a(
+    @Args('kim') kim:string,
+    @Args('do') do:string,
+    @Args('won') won:string,
+  ): boolean {
+    return: true;
+  }
+  ```
+
+- InputType 사용⭕
+
+```
+  a(
+    @Args('a') a:ADto,
+  ): boolean {
+    return: true;
+  }
+```
+
+- InputType과 ArgsType 다른점은 ArgsType은 이름을 쓰지 않아도 되고, object로 넘어오지 않는다. object로 넘어오지 않는다는 뜻은 @Args() 괄호 안에
+  인자 ''가 넘어가지 않는다.
+
+- restaurants.resolver.ts input을 Dto로 바꾼다.
+
+- @Args('name') name: string 이런식으로 많은 resolver를 작성해줘야
+  해서 번거로운 방법이었고, InputType은 graphql에서 name: "" 같은
+  object를 많이 전달해줘야 해서 번거로운 방법이었기 때문에
+  ArgsType으로 변경해주면 이러한 수고로움을 겪지 않아도 된다.
+  class CreateRestaurantDto에 모든 것을 관리할 수 있는
+  ArgsType이 제일 좋은 방법인 것 같다.
+  그리고 이 방식을 사용하면 class의 유효성검사도 할 수 있다.

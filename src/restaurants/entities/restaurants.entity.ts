@@ -6,8 +6,15 @@ export class Restaurant {
   // name이라는 1개의 필드를 가지고 있다.
   @Field((type) => String)
   name: string;
-  // isGood이라는 1개의 필드를 가지고 있다.
-  @Field((type) => Boolean, { nullable: true })
+  // isGood이라는 1개의 필드를 가지고 있다. (제거함)
+  @Field((type) => Boolean)
   // nullable이기 떄문에 ?를 붙여준다.
-  isGood?: boolean;
+  // isGood? -> isVegan으로 변경, { nullable: true } 삭제
+  isVegan: boolean;
+
+  @Field((type) => String)
+  address: string;
+
+  @Field((type) => String)
+  ownerName: string;
 }
