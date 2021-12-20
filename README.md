@@ -297,3 +297,105 @@ mutation {
   class CreateRestaurantDto에 모든 것을 관리할 수 있는
   ArgsType이 제일 좋은 방법인 것 같다.
   그리고 이 방식을 사용하면 class의 유효성검사도 할 수 있다.
+
+# #1.5
+
+- npm i class-validator
+- create-resturant.dto.ts에서
+  name은 @Length @IsString
+  address, ownerName은 @IsString
+  isVegan은 @IsBoolean으로 class 유효성 검사한다.
+
+- http://localhost:3000/graphql에서 최대길이를 테스트하기 위해 입력한다.
+
+- 5~10 안에 들어오는 경우
+
+```
+ mutation {
+  createRestaurant(
+  name:"12",
+  address:"123213",
+  isVegan:true,
+  ownerName: "kim"
+  )
+  }
+```
+
+```
+{
+  "data": {
+    "createRestaurant": true
+  }
+}
+```
+
+- 5~10이 최대 길이인데, 통과하였다. 왜냐하면 validation-pipeline을 만들지 않았다.
+- main.ts에서 app.useGlobalPipes( new ValidationPipe());
+- class-transformer를 설치하지 않아도 class-validator가 작동했다.
+  그래도 혹시 모르니까 class-transformer를 설치해준다.
+- npm i class-transformer
+
+- 4글자 짧은 에러
+
+```
+mutation {
+  createRestaurant(
+    name:"1342",
+    address:"123213",
+    isVegan:true,
+    ownerName: "kim"
+  )
+}
+```
+
+```
+  "response": {
+          "statusCode": 400,
+          "message": [
+            "name must be longer than or equal to 5 characters"
+          ],
+          "error": "Bad Request"
+        }
+```
+
+- 16글자 길은 에러
+
+```
+mutation {
+  createRestaurant(
+    name:"1123213213213342",
+    address:"123213",
+    isVegan:true,
+    ownerName: "kim"
+  )
+}
+
+```
+
+```
+ "response": {
+          "statusCode": 400,
+          "message": [
+            "name must be shorter than or equal to 10 characters"
+          ],
+          "error": "Bad Request"
+        }
+```
+
+- 콘솔 결과
+
+```
+mutation {
+  createRestaurant(
+    name:"1123212",
+    address:"123213",
+    isVegan:true,
+    ownerName: "kim"
+  )
+}
+
+```
+
+```
+{ name: '1123212', isVegan: true, address: '123213', ownerName: 'kim' }
+```
