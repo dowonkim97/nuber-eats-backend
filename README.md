@@ -42,7 +42,7 @@
 - git add . (vscode 터미널)
 - git commit -m "#0.6" (vscode 터미널)
 
-# #1
+# #1.0
 
 - https://docs.nestjs.com/graphql/quick-start (internet 검색)
 - npm i @nestjs/graphql graphql@^15 apollo-server-express (vscode 터미널)
@@ -300,7 +300,10 @@ mutation {
 
 # #1.5
 
-- npm i class-validator
+```
+ npm i class-validator
+```
+
 - create-resturant.dto.ts에서
   name은 @Length @IsString
   address, ownerName은 @IsString
@@ -330,10 +333,18 @@ mutation {
 ```
 
 - 5~10이 최대 길이인데, 통과하였다. 왜냐하면 validation-pipeline을 만들지 않았다.
-- main.ts에서 app.useGlobalPipes( new ValidationPipe());
+- main.ts에서
+
+```
+app.useGlobalPipes( new ValidationPipe());
+```
+
 - class-transformer를 설치하지 않아도 class-validator가 작동했다.
   그래도 혹시 모르니까 class-transformer를 설치해준다.
-- npm i class-transformer
+
+```
+npm i class-transformer
+```
 
 - 4글자 짧은 에러
 
@@ -398,4 +409,79 @@ mutation {
 
 ```
 { name: '1123212', isVegan: true, address: '123213', ownerName: 'kim' }
+```
+
+# #2.0
+
+- 타입스크립트, NestJS 데이터베이스
+  통신을 위해 사용하면 편리한 ORM이 필요하다
+  직접 SQL로 보내는 것보다 TYPE ORM(객체 관계 매칭)을 사용하면 타입스크립트의 좋은 점을 이용할 수 있다.
+  type과 NestJS와 연계할 수 있다.
+  데이터베이스 상호작용을 테스트할 수도 있다.
+- https://typeorm.io/#/supported-platforms
+  NodeJS, Browser 등 사용법이 나와있다.
+  Browser에서도 사용할 수 있다는 뜻은 웹에서 SQL 같은 것을 사용한다는 뜻이다.
+  sql-wasm.wasm은 웹 어셈블리라는 뜻이다.
+  Connection Options # Common connection options에서
+  "mysql", "postgres", "cockroachdb", "mariadb", "sqlite" 중에서 "postgres"를 사용하기 때문에
+  다운로드 해준다. postgres는 데이터를 시각화해준다.
+- https://www.postgresql.org/download/ windows 사용자 ✅
+- https://postgresapp.com/ mac 사용자
+- https://eggerapps.at/postico/
+  postgresql GUI mac 사용자
+- https://www.pgadmin.org/ windows 사용자 ✅
+
+# 2.1 mac skip
+
+# 2.2
+
+- 서버 create에서 pgadmin에서 name을 임의로 설정하고,
+  Connection에서 Host name/adress에서
+  localhost로 설정한다.
+- Database nuber-eats를 생성한다. 유저 비밀번호를 만든다.
+- pgAdmin는 항상 켜놓는 게 아니고,
+  postgreSQL을 항상 켜놓는 것이다.
+- PostgreSQL에 대한 정보는
+  http://www.devkuma.com/books/16에 잘 나와있는 것 같다.
+
+# 2.3
+
+- https://docs.nestjs.com/techniques/database
+  NestJS @nestjs/typeorm 및 다른 ORM 패키지인
+  @nestjs/sequelize를 사용해도 된다.
+  mongodb를 사용해도 된다.
+- typeORM는 타입스크립트에 기반 (멀티 플랫폼)
+  NODEJS뿐만 아니라 REACT NATIVE에도 작동한다
+- Sequelize는 자바스크립트에 기반 (타입스크립트 1%)
+  NODEJS만 작동한다.
+- https://docs.nestjs.com/techniques/database
+
+```
+npm install --save @nestjs/typeorm typeorm pg
+```
+
+- typeORM 모듈을 app.module.ts에 설치해준다.
+- @Module import TypeOrmModule.forRoot안에 options?: TypeOrmModuleOptions을 https://github.com/typeorm/typeorm를 참조해서 아래와 같이 집어 넣는다
+
+```
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'postgres',
+      password: '12345',
+      database: 'nuber-eats',
+      synchronize: true,
+      logging: true,
+```
+
+- localhost이면 패스워드를 물어보지 않게 되어있다.
+- synchronize는 TypeORM이 데이터베이스를 연결할 떄
+  모듈을 현재상태로 마이그레이션한다.
+- 마이그레이션이란 운영환경에서 좀 더 낫다고 생각하는
+  다른 운영환경으로 옮겨가는 과정을 뜻한다.
+- logging은 콘솔에 기록하는 것이다.
+  true로 설정했지만 나중에 바꾼다.
+
+```
+npm run start:dev
 ```
