@@ -433,7 +433,7 @@ mutation {
 
 # 2.1 mac skip
 
-# 2.2
+# #2.2
 
 - 서버 create에서 pgadmin에서 name을 임의로 설정하고,
   Connection에서 Host name/adress에서
@@ -444,7 +444,7 @@ mutation {
 - PostgreSQL에 대한 정보는
   http://www.devkuma.com/books/16에 잘 나와있는 것 같다.
 
-# 2.3
+# #2.3
 
 - https://docs.nestjs.com/techniques/database
   NestJS @nestjs/typeorm 및 다른 ORM 패키지인
@@ -461,7 +461,12 @@ npm install --save @nestjs/typeorm typeorm pg
 ```
 
 - typeORM 모듈을 app.module.ts에 설치해준다.
-- @Module import TypeOrmModule.forRoot안에 options?: TypeOrmModuleOptions을 https://github.com/typeorm/typeorm를 참조해서 아래와 같이 집어 넣는다
+
+```
+@Module import TypeOrmModule.forRoot({})
+```
+
+괄호안에 options?: TypeOrmModuleOptions을 https://github.com/typeorm/typeorm를 참조해서 아래와 같이 집어 넣는다
 
 ```
       type: 'postgres',
@@ -485,3 +490,198 @@ npm install --save @nestjs/typeorm typeorm pg
 ```
 npm run start:dev
 ```
+
+# #2.4
+
+- https://www.npmjs.com/package/dotenv
+  dotenv .env파일에서 환경변수를 로드하는 방식도 있지만,
+  NestJS는 configuration 모듈을 가지고 있다.
+  https://docs.nestjs.com/techniques/configuration에서 설치해준다.
+  환경에 구성 변수를 저장하는 것(to store configuration variables in the environment.)이다. dotenv의 최상위에서 실행된다.
+
+```
+npm i --save @nestjs/config
+```
+
+- ConfigModule 모듈을 app.module.ts에 추가해준다.
+
+```
+@Module import ConfigModule.forRoot({})
+```
+
+- app.module.ts에서 ConfigModule의 forRoot안에 ConfigModuleOptions를 살펴보면
+  cache,
+  isGlobal은 어플리케이션의 config 모듈에 어디서나 접근 가능하다. true로 설정,
+  ignoreEnvFile은 서버에 deploy(배포)할 때 환경변수(.env) 파일을 사용하지 않는다.
+  true로 설정,
+  ignoreEnvVars,
+  envFilePath는 ".env"로 읽게 설정,
+  encoding,
+  validationSchema는 원하는 모든 환경 변수의 유효성을 검사할 수 있다.,
+  validationOptions,
+  load,
+  expandVariables 이러한 값들이 있다.
+
+```
+     isGlobal: true,
+    envFilePath: '.env',
+```
+
+- .env.dev 개발용, .env.test 테스트용 .env.prod 프로덕션용
+  환경변수 파일을 생성한다.
+
+- package.json scripts에서 start:dev를 입력하면 production 환경으로 설정
+  나중에는 test를 입력하면 test 환경으로 설정
+
+```
+npm i cross-env
+```
+
+- cross-env는 (cross platform)가상 변수를 설정할 수 있게 해준다.
+  윈도우나 맥이나 리눅스나 상관없이 사용할 수 있게 해준다.
+
+```
+  "start:dev": "cross-env ENV=dev nest start --watch",
+```
+
+- npm run start:dev로 실행하면 cross-env ENV=dev nest start --watch로 출력된다.
+- app.module.ts에서 envFilePath를 다음과 같이 작성해준다.
+
+```
+    envFilePath: process.env.NODE_ENV === "dev" ? ".env.dev" : ".env.test",
+```
+
+- NODE_ENV와 같이 이름은 임의로 작성해주어도 되는 것 같다.
+- .env.prod은 나중에 하기 위해 삭제해준다.
+- dev면 .env.dev를 사용하고 dev가 아니면 .env.test를 사용한다.
+- .gitignore에 .env.dev와 .env.test를 추가해준다.
+
+# #2.5
+
+- app.module.ts에서 ignoreEnvFile을 다음과 같이 작성해준다.
+
+```
+  ignoreEnvFile: process.env.NODE_ENV === "prod"
+```
+
+- prod일 떄만 true, production(운영) 환경일 때는 ConfigModule이 환경변수 파일을 무시(ignoreEnvFile)하게 한다.
+
+```
+    "start": "cross-env ENV=prod nest start",
+```
+
+- prod는 Heroku deploy(배포)할 때 사용한다.
+- app.module.ts에 있던 TypeOrmModule 일부를 .env.dev에 옮긴다.
+
+```
+ host: 'localhost',
+      port: 5432,
+      username: 'dowon',
+      password: '12345',
+      database: 'nuber-eats',
+```
+
+```
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=dowon
+DB_PASSWORD=12345
+DB_NAME=nuber-eats
+```
+
+- .env.dev에 변경해주었다.
+- DB_PORT 등 .env.dev에서 읽어오는 변수는 string이다.
+  typeORM ConfigModuleOption의 port는 number가 되어야 한다.
+  그러므로 string -> number로 바꾸기 위해서는 +를 붙여준다.
+
+- stirng
+
+```
+"12321"
+```
+
+- number (+할 때 stirng 제거)
+
+```
++12321
+```
+
+- app.module.ts TypeOrmModule에도 다음과 같이 변경해준다.
+
+```
+      host: process.env.DB_HOST,
+      port: +process.env.DB_PORT,
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+```
+
+```
+    throw new Error('SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string')
+          ^
+Error: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string
+```
+
+- 에러가 발생했다.
+
+```
+    "start": "cross-env NODE_ENV=prod nest start",
+    "start:dev": "cross-env NODE_ENV=dev nest start --watch",
+```
+
+- package.json에서 ENV를 NODE_ENV로 작성해서 해결하였다.
+  cross-env 7버전 이상은 ENV가 인식이 안되는 것 같다.
+
+- ERROR [TypeOrmModule] Unable to connect to the database. Retrying ...
+  콘솔에서 다음과 같은 에러를 일부러 발생시켜 봤다. .env.dev에서 DB_NAME을 nuber-eatssss 잘못 입력해주면 다음과 같이 에러가 발생한다.
+- validationSchema에서 환경변수가 준비되지 않으면 앱이 실행되지 않게 해준다.
+  놓치는 게 있으면 실행이 되지 않게 설정해주어야 한다.
+
+# #2.6
+
+- joi는 자바스크립트용 가장 강력한 스키마 설명 언어이다. 데이터 유효성 검사 툴이다.
+  https://www.npmjs.com/package/joi 환경변수의 유효성을 검사한다.
+  자바스크립트로 만들어져 있다. (타입스크립트 2%)
+
+```
+npm i joi
+```
+
+- app.module.ts에 joi를 import 해준다. as가 import 모두 가져오는 것 같다.
+
+```
+import * as Joi from 'joi'
+```
+
+import Joi from "joi"는 console.log(Joi)할 때 undifined가 뜬다
+export 된 멤버가 아니기 때문이다.
+
+- app.module.ts validationSchema에서
+  https://joi.dev/api/?v=17.5.0와 https://docs.nestjs.com/techniques/configuration를 보면 Joi.object를 써서 각각 검사할 수 있다.
+
+```
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string().valid('dev', 'prod'),
+```
+
+- 환경변수도 유효성을 검사할 수 있기 때문에 보안에 좋다.
+
+```
+  validationSchema: Joi.object({
+  NODE_ENV: Joi.string().valid('coke'),
+```
+
+- "NODE_ENV" must be [coke] 정상적으로 에러가 동작한다.
+
+```
+        NODE_ENV: Joi.string().valid('dev', 'prod').required(),
+        DB_HOST: Joi.string().required(),
+        DB_PORT: Joi.string().required(),
+        DB_USERNAME: Joi.string().required(),
+        DB_PASSWORD: Joi.string().required(),
+        DB_NAME: Joi.string().required(),
+```
+
+- DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME 모두 string으로 해준다
+  .env.dev에서 DB_PASSWORD=12345를 지우니까 "DB_PASSWORD" is required 에러가 발생한다. 이렇게 스키마의 유효성을 검사할 수 있다.
+  이렇듯 joi를 활용해 process.env 변수의 존재를 체크할 수 잇다.
