@@ -1,18 +1,18 @@
 # NUBER-EATS-BACKEND
 
 - 나에게 주는 교훈
-  다른 사람들보다 시간이 많이 걸리더라도 완벽히 스스로 알자
-  모작가가 아닌 창작가가 되자.
+- 다른 사람들보다 시간이 많이 걸리더라도 완벽히 스스로 알자
+- 모작이 아닌 창작을 하자.
 
 - 주의사항
-  코드를 무작정 다 따라하지 않아야 한다.
-  내가 직접 코드를 짜볼 수 있어야한다.
-  따라만해서는 절대 실력이 늘지 않고, 자신의 실력이 아니다.
+- 코드를 무작정 다 따라하지 않아야 한다.
+- 내가 직접 코드를 짜볼 수 있어야한다.
+- 따라만해서는 절대 실력이 늘지 않고, 자신의 실력이 아니다.
 
 - 해결방법
-  다른 하나의 nest README에서는 직접 배운 것들을 기록한다.
-  다른 하나의 nest 폴더에서는 private로 진행한다.
-  다른 하나의 nest는 직접 배운 코드를 다르게 짜본다.
+- 다른 하나의 nest README에서는 직접 배운 것들을 기록한다.
+- 다른 하나의 nest 폴더에서는 private로 진행한다.
+- 다른 하나의 nest는 직접 배운 코드를 다르게 짜본다.
 
 # 강의에서 배운 것들만 기록
 
@@ -480,7 +480,7 @@ npm install --save @nestjs/typeorm typeorm pg
 ```
 
 - localhost이면 패스워드를 물어보지 않게 되어있다.
-- synchronize는 TypeORM이 데이터베이스를 연결할 떄
+- synchronize는 TypeORM이 데이터베이스를 연결할 때
   모듈을 현재상태로 마이그레이션한다.
 - 마이그레이션이란 운영환경에서 좀 더 낫다고 생각하는
   다른 운영환경으로 옮겨가는 과정을 뜻한다.
@@ -544,7 +544,8 @@ npm i cross-env
   "start:dev": "cross-env ENV=dev nest start --watch",
 ```
 
-- npm run start:dev로 실행하면 cross-env ENV=dev nest start --watch로 출력된다.
+- package.json에서 start:dev를 다음과 같이 작성해준다.
+  npm run start:dev로 실행하면 cross-env ENV=dev nest start --watch로 출력된다.
 - app.module.ts에서 envFilePath를 다음과 같이 작성해준다.
 
 ```
@@ -685,3 +686,244 @@ export 된 멤버가 아니기 때문이다.
 - DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME 모두 string으로 해준다
   .env.dev에서 DB_PASSWORD=12345를 지우니까 "DB_PASSWORD" is required 에러가 발생한다. 이렇게 스키마의 유효성을 검사할 수 있다.
   이렇듯 joi를 활용해 process.env 변수의 존재를 체크할 수 잇다.
+
+- 지금까지 Type ORM을 이용한 DB 연결을 했다.
+
+# #3.0
+
+- https://typeorm.io/#/entities
+  Entity는 데이터베이스에 저장되는 데이터의 형태를 보여주는 모델이다.
+  Entity는 데이터베이스 테이블(또는 MongoDB를 사용할 때 컬렉션)에 매핑되는 클래스입니다. 새 클래스를 정의하고 다음으로 표시하여 엔터티를 만들 수 있습니다
+
+```
+@Entity()
+export class User {
+
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    firstName: string;
+
+    @Column()
+    lastName: string;
+
+    @Column()
+    isActive: boolean;
+
+}
+```
+
+- restaurants.entity.ts @ObjectType GraphQL에서 사용한 Entity와 유사하다.
+  @PrimaryGeneratedColumn()은 id를 나타내고, firstName, lastName, isActive가 @Column으로 DB로 저장되어 있다.
+- @ObjectType은 자동으로 스키마를 빌드하기 위해 사용되는 GraphQL 데코레이터이다.
+- @Entity()는 TypeORM이 DB의 내용을 저장해주게 한다.
+
+- TypeORM 뜻을 까먹었다. https://dkant.net/2019/06/17/typeorm/ 참고했다.
+  Object Relational Mapping, 객체-관계 매핑
+  객체와 테이블 시스템(RDBMSs)을 변형 및 연결해주는 작업이라 말 할 수 있다. ORM을 이용한 개발은 객체와 데이터베이스의 변형에 유연하게 대처할 수 있도록 해준다. ORM을 객체 지향 프로그래밍 관점에서 생각해보면, 관계형 데이터베이스에 제약을 최대한 받지 않으면서, 객체를 클래스로 표현하는 것과 같이 관계형 데이터베이스를 객체처럼 쉽게 표현 또는 사용하자는 것이다.
+- restaurants.entity.ts에서 TypeORM에도 사용할 수 있게 @Entity 생성하고,
+  GraphQL field처럼 Column을 모두 넣어준다.
+- Entity데코레이터를 이용해 Column을 모두 넣어주게 되면,
+  DB에 저장된 실제 데이터의 형식을 만들 수 있게 된다.
+- 테이블을 확인해본 결과 TypeORM이 DB에 Entity를 넣지 않았다.
+  Entity에게 말해줘야 한다. 이럴경우 옵션 2가지가 있다.
+- 옵션 1 app.module.ts TypeORMModule에 넣는다. /restaurants/entities/restaurants.entity에서 온다.
+
+```
+entities: [Restaurant],
+```
+
+- Entity "Restaurant" does not have a primary column. 에러가 발생한다.
+
+```
+  @PrimaryGeneratedColumn()
+  id: number;
+```
+
+- @Field에 Number 타입도 추가해준다.
+- 콘솔에 SQL문이 커지는 데 그 이유는 synchronize를 true로 설정해줘서 그렇다.
+  TypeORM이 Entity를 찾고 알아서 migration 마이그레이션 해준다.
+  DB 구성을 자동으로 바꿔준다.
+- 수동으로 설정하는 방법 synchronize를 아래와 같이 변경해준다.
+
+```
+      synchronize: process.env.NODE_ENV !== 'prod',
+```
+
+- production 상태가 아니면 synchronize가 true가 된다.
+  production에는 실제 데이터를 가지고 있기 때문에 DB를 따로 migrate하고 싶을 수 있다.
+- migrate는 좀 더 나은 환경으로 옮기는 과정,
+  synchronize 정확한 의미를 몰라서 찾아보았다.
+  https://evan-moon.github.io/2019/09/19/sync-async-blocking-non-blocking/
+  현재 작업의 응답과 다음 작업의 요청의 타이밍을 맞추는 방식이다.
+
+- 맥 postico | 윈도우 pgadmin ✅
+- 스키마 -> 테이블에서 restaurant를 확인 가능하다.
+  칼럼에는 id, name, isVegan, address, ownerName 등을 확인 가능하다.
+- restaurants.entity.ts에 categoryname 추가해주고, pgadmin에서 ✅한다.
+- 스키마를 자동으로 생성해주고 DB에도 즉시 반영해준다.
+- ObjectType과 Entity를 섞는 방법을 알았다.
+
+# #3.1
+
+- TypeScript를 이용해 DB에 있는 restaurant에 접근하는 방법
+- TypeOrmModule에서 Repository에는 2 옵션이 있다.
+- 옵션 1 Active Record 옵션 2 Data Mapper가 있다.
+  DB랑 상호작용할 때 쓰는 패턴이다.
+- Ruby on Rails, Django는 Active Record를 사용한다.
+  Ruby on Rails는 간략하게 프로그래밍 언어 Ruby로 개발되었고,
+  완성도 있는 서비스를 빠르게 개발할 수 있다. Django는 파이썬
+  https://edu.goorm.io/learn/lecture/16335/%ED%95%9C-%EB%88%88%EC%97%90-%EC%9D%BD%EB%8A%94-%EB%A3%A8%EB%B9%84-%EC%98%A8-%EB%A0%88%EC%9D%BC%EC%A6%88/lesson/806287/ruby-on-rails%EB%9E%80
+- NestJS는 Data Mapper를 이용한다.
+- https://typeorm.io/#/active-record-data-mapper
+- Active Record 패턴은 모델 내에서 데이터베이스에 액세스하는 접근 방식
+  소규모 앱에 단순하게 사용할 수 있도록 도와준다.
+- Data Mapper는 모델 대신 리포지토리 내의 데이터베이스에 액세스하는 접근 방식
+  유지관리를 도와주고 대규모 앱에 적합하다.
+- TypeOrm에서 Active Record 패턴으로 사용하고 싶다면
+  restaurants.entity.ts @Entity를 BaseEntity로 extends 해줘야 한다.
+
+- 액티브 레코드 패턴
+
+```
+@Entity()
+export class User extends BaseEntity {
+
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    firstName: string;
+
+    @Column()
+    lastName: string;
+
+    @Column()
+    isActive: boolean;
+
+}
+```
+
+- 엔터티로 작업하는 방법
+
+```
+// example how to save AR entity
+const user = new User();
+user.firstName = "Timber";
+user.lastName = "Saw";
+user.isActive = true;
+await user.save();
+
+// example how to remove AR entity
+await user.remove();
+
+// example how to load AR entities
+const users = await User.find({ skip: 2, take: 5 });
+const newUsers = await User.find({ isActive: true });
+const timber = await User.findOne({ firstName: "Timber", lastName: "Saw" });
+```
+
+- 내가 사용하고 싶은대로 만들기
+
+```
+const timber = await User.findByName("Timber", "Saw");
+```
+
+- 데이터 매퍼 패턴
+
+```
+@Entity()
+export class User {
+
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    firstName: string;
+
+    @Column()
+    lastName: string;
+
+    @Column()
+    isActive: boolean;
+
+}
+```
+
+- 엔터티로 작업하는 방법
+
+```
+const userRepository = connection.getRepository(User);
+
+// example how to save DM entity
+const user = new User();
+user.firstName = "Timber";
+user.lastName = "Saw";
+user.isActive = true;
+await userRepository.save(user);
+
+// example how to remove DM entity
+await userRepository.remove(user);
+
+// example how to load DM entities
+const users = await userRepository.find({ skip: 2, take: 5 });
+const newUsers = await userRepository.find({ isActive: true });
+const timber = await userRepository.findOne({ firstName: "Timber", lastName: "Saw" });
+```
+
+- 내가 사용하고 싶은대로 만들기
+
+```
+const userRepository = connection.getCustomRepository(UserRepository);
+const timber = await userRepository.findByName("Timber", "Saw");
+```
+
+- data Mapper 패턴에는 User.find(), new 같은 것을 사용하지 않는다
+  Entity와 실제로 상호작용하는 Repository를 사용한다.
+  User Entity에 접근하기 위해 getRepository(User)를 사용한다.
+  User.save() -> userRepository.save()를 한다.
+  User.find() -> userRepository.find()를 한다.
+- NestJs Data Mapper 사용 이유는 NestJS + TypeOrm 개발 환경에서
+  실제로 구현하는 서비스, 테스팅, 유닛테스팅 등
+  어디서든지 접근 가능한 Repository를 사용하는 모듈을 사용할 수 있기 때문이다.
+- NestJs는 자동으로 Repository를 사용할 수 있도록 class에 알아서 준비해준다.
+
+# #3.2
+
+- export restaurants.module.ts
+- import app.module.ts
+- repository를 import 한다.
+  restaurants.module.ts은 restaurant Repository가 필요하다
+- PART 1 TypeORM을 이용해 import Restaurant repository
+
+```
+  imports: [TypeOrmModule.forFeature([Restaurant])],
+
+```
+
+- entity의 class가 여러개이면 여러개를 넣는다.
+- DB를 접근할 수 있는 service를 만든다.
+- restaurants 폴더 안에 restaurants.service.ts 파일을 생성한다.
+
+```
+@Injectable()
+export class RestaurantService {}
+```
+
+restaurants.resolver.ts RestaurantReslover에서 constructor를 작성한다.
+
+```
+  constructor(private readonly restaurantService: RestaurantService) {}
+```
+
+- Error: Nest can't resolve dependencies of the RestaurantReslover (?). Please make sure that the argument RestaurantService at index [0] is available in the RestaurantsModule context.
+- restaurants.module.ts에서 providers에 RestaurantService를 추가 해주었다.
+
+- 모든 restaurant들을 가져오는 부분인
+  @Args('veganOnly') veganOnly: boolean 지웠다.
+  service를 하나 return 한다.
+  restaurants.service.ts RestaurantService에서 getAll()을 작성해서
+  모든 restaurant들을 가져온다.
+- TypeORM을 이용해서 Restaurant repository를 import 했다.
+  RestaurantService에서 repository를사용하기 위해
