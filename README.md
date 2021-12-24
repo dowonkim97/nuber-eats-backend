@@ -728,7 +728,7 @@ export class User {
   DB에 저장된 실제 데이터의 형식을 만들 수 있게 된다.
 - 테이블을 확인해본 결과 TypeORM이 DB에 Entity를 넣지 않았다.
   Entity에게 말해줘야 한다. 이럴경우 옵션 2가지가 있다.
-- 옵션 1 app.module.ts TypeORMModule에 넣는다. /restaurants/entities/restaurants.entity에서 온다.
+- 옵션 1 app.module.ts TypeORMModule에 entities를 넣는다. /restaurants/entities/restaurants.entity에서 온다.
 
 ```
 entities: [Restaurant],
@@ -891,18 +891,18 @@ const timber = await userRepository.findByName("Timber", "Saw");
 
 # #3.2
 
-- export restaurants.module.ts
-- import app.module.ts
-- repository를 import 한다.
-  restaurants.module.ts은 restaurant Repository가 필요하다
-- PART 1 TypeORM을 이용해 import Restaurant repository
+- restaurants.module.ts은 providers를 이미 가지고 있다.
+  export도 있고, app.module.ts에는 import도 있다.
+  repository를 import 해볼 것이다.
+  restaurants.module.ts은 restaurant Repository가 필요하다.
 
 ```
   imports: [TypeOrmModule.forFeature([Restaurant])],
-
 ```
 
-- entity의 class가 여러개이면 여러개를 넣는다.
+- restaurants.module.ts TypeOrmModule.forFeature([])을 넣는다.
+  괄호 안에 entity의 class가 여러개이면 여러개를 넣는다.
+  Restaurant는 entity이다.
 - DB를 접근할 수 있는 service를 만든다.
 - restaurants 폴더 안에 restaurants.service.ts 파일을 생성한다.
 
@@ -911,19 +911,156 @@ const timber = await userRepository.findByName("Timber", "Saw");
 export class RestaurantService {}
 ```
 
-restaurants.resolver.ts RestaurantReslover에서 constructor를 작성한다.
+- restaurants.service.ts를 RestaurantService에 inject 하려면 restaurants.resolver.ts RestaurantReslover에서 constructor를 작성한다.
 
 ```
   constructor(private readonly restaurantService: RestaurantService) {}
 ```
 
 - Error: Nest can't resolve dependencies of the RestaurantReslover (?). Please make sure that the argument RestaurantService at index [0] is available in the RestaurantsModule context.
+
+- 에러의 의미는 Nest가 RestaurantReslover에서 RestaurantService를 resolve(귀결))하지 못했다는 뜻이다.
+- https://okky.kr/article/384413 자바스크립트 패턴과 테스트라는 책에서
+  resolve를 귀결이라고 번역 했다고 하는데, 귀결이란 논의나 행동 등이 어떤 결론이나 결과에 이르게 된다는 뜻이다.
 - restaurants.module.ts에서 providers에 RestaurantService를 추가 해주었다.
 
-- 모든 restaurant들을 가져오는 부분인
-  @Args('veganOnly') veganOnly: boolean 지웠다.
-  service를 하나 return 한다.
+```
+  providers: [RestaurantReslover, RestaurantService],
+
+```
+
+```
+  @Args('veganOnly') veganOnly: boolean
+```
+
+- restaurants.resolver.ts RestaurantReslover에서
+  모든 restaurant들을 가져오는 부분인 restaurants() 괄호 안에 부분을 삭제하였다.
+
+- RestaurantService에서 service를 하나 return 한다.
   restaurants.service.ts RestaurantService에서 getAll()을 작성해서
   모든 restaurant들을 가져온다.
-- TypeORM을 이용해서 Restaurant repository를 import 했다.
-  RestaurantService에서 repository를사용하기 위해
+
+- PART 1 restaurants.module.ts에서 TypeOrmModule을 이용해
+  Restaurant repository를 imports한다.
+- PART 2 restaurants.service.ts RestaurantService를 만들고,
+  restaurants.module.ts RestaurantService에서
+  repository를 사용하기 위해 service를 restaurants.resolver.ts RestaurantReslover에 (constrctor ~) import한다.
+- PART 3 restaurants.resolver.ts RestaurantReslover는
+  this.restaurantService.getAll()을 return한다
+- PART 4 getAll()은 restaurants.service.ts에서
+  this.restaurants.find()를 return 한다.
+
+```
+  this.restaurantService.getAll()
+```
+
+- 'void' 형식은 'Restaurant[]' 형식에 할당할 수 없습니다라고 에러가 발생한다.
+- Promise<>를 안 작성해줘도 에러가 발생한다.
+
+```
+getAll(): Promise<Restaurant[]>
+```
+
+- restaurants.service.ts RestaurantService에서 다음과 같이 추가해준다.
+  그리고 repository를 inject 해야 하기 때문에 restaurants.service.ts에 constructor()을 추가해준다.
+  restaurants.module.ts imports도 inject하기 위해 작성하였다.
+
+```
+ constructor(
+    @InjectRepository(Restaurant)
+    private readonly restaurants: Repository<Restaurant>,
+  ) {}
+```
+
+- Restaurant entity의 InjectRepository를 하고 있고,
+  이름은 restaurants, class는 Restaurant entity를 가진 Repository이다.
+  restaurants.service.ts getAll(): Promise<Restaurant[]> {}
+  괄호 안에 아래와 같이 작성한다.
+
+```
+return this.restaurants.
+```
+
+- Repository에 접근해 모든 것을 할 수 있다. find를 넣어주었다.
+- repository를 inject하고 나면 restaurants.module.ts에서 모든게 동작한다.
+- restaurants.resolver.ts에도 Promise를 작성해준다.
+  ```
+  restaurants(): Promise<Restaurant[]> {}
+  ```
+- http://localhost:3000/graphql에서 스키마를 확인해보면
+  최신으로 업데이트 된 것을 확인할 수 있다.
+
+```
+{
+  restaurants{
+    id
+  }
+}
+```
+
+```
+{
+  "data": {
+    "restaurants": []
+  }
+}
+```
+
+- 빈 배열을 가지고 있지만, DB에 접근하는 게 성공했다.query: SELECT "Restaurant"."id" AS "Restaurant_id", "Restaurant"."name" AS "Restaurant_name", "Restaurant"."isVegan" AS "Restaurant_isVegan", "Restaurant"."address" AS "Restaurant_address", "Restaurant"."ownerName" AS "Restaurant_ownerName", "Restaurant"."categoryname" AS "Restaurant_categoryname" FROM "restaurant" "Restaurant"
+
+# #3.3
+
+- 정리
+- app.module.ts TypeOrmModule에 Restaurant라는 배열의 entitis를 가지고 있다.
+  이것은 Restaurant이 DB가 된다. logging은 DB의 모든 로그를 확인하는데,
+  production 환경이 아니면 logging이 되지 않게 한다.
+
+```
+      logging:  process.env.NODE_ENV !== 'prod',
+```
+
+- restaurants.module.ts에서 한 것은 Restaurant를
+  forFeature을 사용해 import 했다. feature은 Restaurant entity이다.
+- forFeature은 TypeOrmModule이 특정 feature을 import 할 수 있게 해준다.
+- https://docs.nestjs.kr/techniques/database를 참고하면 forFeature() 메소드를 사용하여 현재 범위에 등록된 저장소를 정의합니다.
+- restaurants.module.ts RestaurantService는 class에 inject할 수 있게 providers에 추가되어야 한다. 이걸해주면 서비스에 접근할 수 있다.
+- 그리고 유저가 restaurants.resolver.ts RestaurantReslover로 가면 this.service.getAll()을 return 한다.
+- restaurants.service.ts로 가면 getAll function이 this.restaurants.find()를 return하는 것을 볼 수 있다. restaurants는 Restaurant entity의 repository이다. https://typeorm.io/#/active-record-data-mapper Data Mapper pattern에서
+
+```
+1. const userRepository = connection.getRepository(User);
+```
+
+```
+2. @InjectRepository(Restaurant)
+```
+
+- 1번에서 볼 수 있는 Repository가 2번에서 Repository를 inject하면 작동된다.
+  좋은 decorator(@)가 있기 때문에 nestJS typeOrm을 사용한다.
+  restaurants.service.ts InjectRepository()안에 entity의 이름(Restaurant)을 넣어 호출한다. restaurants.entity.ts @Entity()여야한다.
+  private readonly로 만들고, 이름은 restaurants,
+  타입은 Restaurant Repository로 만든다.
+- this.restaurants. 뒤에 find, save, marge 등 모두 사용할 수 있다.
+  이렇게 하면 DB의 모든 것을 사용할 수 있게 된다.
+  이런식으로 TypeORM(Entity)을 graphql의 @objectType 옆에 쓰면 DB 모델 생성하고, 자동으로 graphQL에 스키마를 작성할 수 있게 해준다.
+  restaurants.resolver.ts에서
+  restaurants()과 같이 graphql query에도 사용할 수 있다.
+  restaurants.resolver.ts restaurantService에 연결되고
+  @InjectRepository(Restaurant)와 같이 DB에 접근한다.
+
+- bugod 잘 정리 한 내용
+
+- 전체 흐름: AppModule - TypeOrmModule - RestaurantsModule - RestaurantResolver - RestaurantService
+
+1. TypeOrmModule에 DB로 전송할 entity들 설정
+
+2. RestaurantsModule
+   : TypeOrmModule의 Restaurant 엔티티를 다른 곳에서 Inject할 수 있도록 import하기.
+   : providers에 RestaurantService 주입 => RestaurantResolver에서 사용 가능.
+
+3. RestaurantService
+   : @InjectReposity(entity): 전달받은 entity를 기반으로 Repository 생성.
+   : Repository의 메서드들로 DB에 접근하는 방식 지정.
+
+4. RestaurantResolver
+   : GraphQL Query/Mutation으로 DB에 접근하는 RestaurantService의 메서드들 활용.

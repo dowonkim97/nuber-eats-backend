@@ -1,8 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Restaurant } from './entities/restaurants.entity';
 
 @Injectable()
 export class RestaurantService {
-  getAll() {
-    return; //실제로 DB에 접근하는 방식
+  constructor(
+    @InjectRepository(Restaurant)
+    private readonly restaurants: Repository<Restaurant>,
+  ) {}
+  getAll(): Promise<Restaurant[]> {
+    return this.restaurants.find(); //실제로 DB에 접근하는 방식
   }
 }

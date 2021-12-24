@@ -13,9 +13,9 @@ export class RestaurantReslover {
   @Query((returns) => [Restaurant])
   // 타입스크립트 Restaurant[]
   // @Args('veganOnly')는 GraphQL,  veganOnly는 function
-  restaurants(): Restaurant[] {
+  restaurants(): Promise<Restaurant[]> {
     // console.log(veganOnly);
-    return this.restaurantService.getAll;
+    return this.restaurantService.getAll();
   }
   @Mutation((returns) => Boolean)
   createRestaurant(
