@@ -945,9 +945,9 @@ export class RestaurantService {}
 - PART 2 restaurants.service.ts RestaurantService를 만들고,
   restaurants.module.ts RestaurantService에서
   repository를 사용하기 위해 service를 restaurants.resolver.ts RestaurantReslover에 (constrctor ~) import한다.
-- PART 3 restaurants.resolver.ts RestaurantReslover는
-  this.restaurantService.getAll()을 return한다
-- PART 4 getAll()은 restaurants.service.ts에서
+- PART 3 restaurants.resolver.ts RestaurantReslover는 restaurants():
+  Restaurant[] {} 괄호 안에 this.restaurantService.getAll()을 return한다
+- PART 4 (980줄까지 한 다음) restaurants.service.ts에서 getAll() {} 괄호 안에
   this.restaurants.find()를 return 한다.
 
 ```
@@ -962,7 +962,12 @@ getAll(): Promise<Restaurant[]>
 ```
 
 - restaurants.service.ts RestaurantService에서 다음과 같이 추가해준다.
-  그리고 repository를 inject 해야 하기 때문에 restaurants.service.ts에 constructor()을 추가해준다.
+
+```
+  restaurants(): Promise<Restaurant[]>
+```
+
+- 그리고 repository를 inject 해야 하기 때문에 restaurants.service.ts에 constructor()을 추가해준다.
   restaurants.module.ts imports도 inject하기 위해 작성하였다.
 
 ```
@@ -1025,7 +1030,10 @@ return this.restaurants.
 - https://docs.nestjs.kr/techniques/database를 참고하면 forFeature() 메소드를 사용하여 현재 범위에 등록된 저장소를 정의합니다.
 - restaurants.module.ts RestaurantService는 class에 inject할 수 있게 providers에 추가되어야 한다. 이걸해주면 서비스에 접근할 수 있다.
 - 그리고 유저가 restaurants.resolver.ts RestaurantReslover로 가면 this.service.getAll()을 return 한다.
-- restaurants.service.ts로 가면 getAll function이 this.restaurants.find()를 return하는 것을 볼 수 있다. restaurants는 Restaurant entity의 repository이다. https://typeorm.io/#/active-record-data-mapper Data Mapper pattern에서
+- restaurants.service.ts로 가면 getAll function이 this.restaurants.find()를
+  return하는 것을 볼 수 있다. restaurants는 Restaurant entity의 repository이다.
+  https://typeorm.io/#/active-record-data-mapper
+  Data Mapper pattern에서 1번을 2번처럼 사용할 수 있다.
 
 ```
 1. const userRepository = connection.getRepository(User);
@@ -1048,7 +1056,7 @@ return this.restaurants.
   restaurants.resolver.ts restaurantService에 연결되고
   @InjectRepository(Restaurant)와 같이 DB에 접근한다.
 
-- bugod 잘 정리 한 내용
+- bugod님이 잘 정리 한 내용
 
 - 전체 흐름: AppModule - TypeOrmModule - RestaurantsModule - RestaurantResolver - RestaurantService
 
@@ -1064,3 +1072,17 @@ return this.restaurants.
 
 4. RestaurantResolver
    : GraphQL Query/Mutation으로 DB에 접근하는 RestaurantService의 메서드들 활용.
+
+# #3.4
+
+- Restaurant 생성하는 게 목적이다. restaurants.service.ts getAll()을 보면
+  (method)를 만들어야 한다. (method)는 class안에 있는 function이다.
+
+```
+class Person {
+  //Person 유형에만 작동하는 메소드입니다.
+  func personGreeting() {
+    greet(yourName: "Santosh", category: .Person)
+    }
+}
+```
