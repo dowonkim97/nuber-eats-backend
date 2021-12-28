@@ -30,7 +30,7 @@ export class RestaurantReslover {
     // console.log(createRestaurantInput);
     // console.log(createRestaurantDto);
     try {
-      this.restaurantService.createRestaurant(createRestaurantDto);
+      await this.restaurantService.createRestaurant(createRestaurantDto);
       return true;
     } catch (error) {
       console.log(error);

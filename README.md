@@ -1090,7 +1090,7 @@ class Person {
 - method는 Person을 예로 들어보면 class 안에 있는 Persion이 method이다.
 - restaurants.service.ts에서 createRestaurant() 를 만든다.
   restaurants.resolver.ts에서 createRestaurant()를 호출하면
-  createRestaurantDto를 메소드의 형태로 받는다.
+  restaurants.service.ts에서 createRestaurantDto를 메소드의 형태로 받는다.
 
   ```
     createRestaurant(createRestaurantDto: createRestaurantDto) {}
@@ -1133,9 +1133,16 @@ const newRestaurant = new Restaurant();
   newRestaurant.name = createRestaurantDto.name;
 ```
 
-- createRestaurant 안에 newRestaurant()을 넣는다.
-- 매번 이런 방식이면 힘들기 때문에 this.restaurants.create()를 만든다.
-  ()을 보면 이것은 새로운 인스턴스를 생성한다. ()안에 이미 createRestaurantDto를 만들어준다. 아래의 코드를 새로 만들지 않아도 된다. 이것이 dto와 ts의 장점이다.
+- restaurants.service.ts createRestaurant {} 괄호 안에 newRestaurant을 넣는다.
+- 매번 위의 코드와 같은 방식이면 힘들기 때문에 this.restaurants.create()를 만든다.
+  ()을 보면 이것은 새로운 인스턴스를 생성한다.
+  ()안에 이미 만든 createRestaurantDto를 넣어준다.
+
+  ```
+    const newRestaurant = this.restaurants.create(createRestaurantDto);
+  ```
+
+  아래의 코드를 새로 만들지 않아도 된다. 이것이 dto와 ts의 장점이다.
   object, class, arguments를 모두 믿을만하기 때문이다.
 
 ```
@@ -1176,3 +1183,13 @@ return this.restaurants.save(newRestaurant)
 - restaurants.entity.ts를 보면 categoryname이 string이기 때문에 null이면 안 되는데,
   Restaurant를 생성할 때 categoryname을 전달해주지 않았고, 아무도 알려주지 않았다.
   entity에는 넣었는데 createRestaurantDto에는 넣지 않아서 에러가 발생했다.
+
+```
+{
+  "data": {
+    "createRestaurant": false
+  }
+}
+```
+
+- await을 빠트려서 true로 나왔다. 이제 정상적으로 false가 나온다.
