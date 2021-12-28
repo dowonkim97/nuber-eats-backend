@@ -1086,3 +1086,93 @@ class Person {
     }
 }
 ```
+
+- method는 Person을 예로 들어보면 class 안에 있는 Persion이 method이다.
+- restaurants.service.ts에서 createRestaurant() 를 만든다.
+  restaurants.resolver.ts에서 createRestaurant()를 호출하면
+  createRestaurantDto를 메소드의 형태로 받는다.
+
+  ```
+    createRestaurant(createRestaurantDto: createRestaurantDto) {}
+  ```
+
+- TypeOrm 문서를 보면 create와 save 2가지 있다. 이 두 가지의 차이점을 알아본다.
+- 새로운 Photo를 생성하는 예시 (목적 = DB에 Photo 저장)
+
+```
+createConnection(/*...*/).then(connection => {
+
+    let photo = new Photo();
+    photo.name = "Me and Bears";
+    photo.description = "I am near polar bears";
+    photo.filename = "photo-with-bears.jpg";
+    photo.views = 1;
+    photo.isPublished = true;
+
+    return connection.manager
+            .save(photo)
+            .then(photo => {
+                console.log("Photo has been saved. Photo id is", photo.id);
+            });
+
+}).catch(error => console.log(error));
+```
+
+- 1가지 방법은 new photo()를 사용하는 것이다.
+  이것은 js, ts 측면에서 class 생성밖에 안된다. DB를 건들지 않는다.
+  그저 생성하는 것이다.
+
+```
+(ex)
+let photo = new Photo();
+    photo.name = "Me and Bears";
+```
+
+```
+const newRestaurant = new Restaurant();
+  newRestaurant.name = createRestaurantDto.name;
+```
+
+- createRestaurant 안에 newRestaurant()을 넣는다.
+- 매번 이런 방식이면 힘들기 때문에 this.restaurants.create()를 만든다.
+  ()을 보면 이것은 새로운 인스턴스를 생성한다. ()안에 이미 createRestaurantDto를 만들어준다. 아래의 코드를 새로 만들지 않아도 된다. 이것이 dto와 ts의 장점이다.
+  object, class, arguments를 모두 믿을만하기 때문이다.
+
+```
+  {
+      name: createRestaurantDto.name,
+    }
+```
+
+- newRestaurant의 Restaurant은 js에만 존재하고 DB에는 실제 저장되어 있지 않다.
+  DB에 저장하고 싶으면 save 메소드를 사용해야 한다.
+
+```
+(ex)
+return connection.manager.save(photo)
+```
+
+```
+return this.restaurants.save(newRestaurant)
+```
+
+- ()안에 entity를 newRestaurant으로 설정한다.
+  create는 Restaurant, save는 Promise를 리턴한다.
+  Promise<Restaurant>을 해준다.
+
+- Restaurant가 잘 생성되면 true와 false로 결과를 리턴한다.
+  restaurants.resolver.ts에서 createRestaurant async로 바꾸고
+  return true를 try catch문으로 사용한다.
+  async문을 작성할 때는 Promise와 value를 사용해야 한다.
+- http://localhost:3000/graphql에서 실행해본다.
+
+  ```
+  mutation {
+  createRestaurant(name: "kim good", isVegan: false, address: "1212", ownerName: "minsu")
+  }
+  ```
+
+- error: error: "categoryname" 칼럼(해당 릴레이션 "restaurant")의 null 값이 not null 제약조건을 위반했습니다.
+- restaurants.entity.ts를 보면 categoryname이 string이기 때문에 null이면 안 되는데,
+  Restaurant를 생성할 때 categoryname을 전달해주지 않았고, 아무도 알려주지 않았다.
+  entity에는 넣었는데 createRestaurantDto에는 넣지 않아서 에러가 발생했다.

@@ -18,7 +18,7 @@ export class RestaurantReslover {
     return this.restaurantService.getAll();
   }
   @Mutation((returns) => Boolean)
-  createRestaurant(
+  async createRestaurant(
     /*
     @Args('name') name: string,
     @Args('isVegan') isVegan: boolean,
@@ -26,9 +26,15 @@ export class RestaurantReslover {
     @Args('ownerName') ownerName: string,
     */
     @Args() createRestaurantDto: createRestaurantDto,
-  ): boolean {
+  ): Promise<boolean> {
     // console.log(createRestaurantInput);
-    console.log(createRestaurantDto);
-    return true;
+    // console.log(createRestaurantDto);
+    try {
+      this.restaurantService.createRestaurant(createRestaurantDto);
+      return true;
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
   }
 }
