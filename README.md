@@ -1193,3 +1193,147 @@ return this.restaurants.save(newRestaurant)
 ```
 
 - await을 빠트려서 true로 나왔다. 이제 정상적으로 false가 나온다.
+
+# #3.5
+
+- create-resturant.dto.ts에 categoryName을 추가하지 않았다. dto에 업데이트를 하지 않았다.
+  entity를 수정하고 나서 복붙으로 해결 가능하다.
+  매번을 복붙하면 비효율적이다. 코드로 접근을 한다.
+- ObjectType, Field @로 graphql 타입을 만들고 있다.
+- Entity, Column @로 DB 테이블도 만들고 있다.
+- 모든게 통합되기 때문에 graphql, Entity 수정할 필요가 없다. 하지만 문제는 dto가 Entity와 통합 생성되지 않는다.
+- Mapped types를 사용해서 Restaurant entity 파일 하나로 DB테이블. graphql 타입, dto 3가지 모두 생성하는 것으로 고쳐본다.
+- Mapped types는 base type을 바탕으로 다른 버전들을 만들 수 있게 해준다.
+- https://docs.nestjs.com/graphql/mapped-types#mapped-types
+  Partial, Pick, Omit, Intersection 등이 있다.
+- PartialType은 base type, base class를 가져다가
+
+```
+class CreateUserInput {
+  @Field()
+  email: string;
+
+  @Field()
+  password: string;
+
+  @Field()
+  firstName: string;
+}
+```
+
+- export하고, 이 모든 field가 required가 아닌 class로 만들어준다.
+
+```
+@InputType()
+export class UpdateUserInput extends PartialType(CreateUserInput) {}
+```
+
+- PickType은 input type에서 몇 가지 property를 선택해 새로운 class를 만들어준다.
+
+```
+@InputType()
+class CreateUserInput {
+  @Field()
+  email: string;
+
+  @Field()
+  password: string;
+
+  @Field()
+  firstName: string;
+}
+```
+
+- email처럼 특정 property를 선택 (pick) 한다.
+
+```
+@InputType()
+export class UpdateEmailInput extends PickType(CreateUserInput, ['email'] as const) {}
+```
+
+- property 뜻을 몰라서 찾아보았다. https://m.blog.naver.com/magnking/220966405605 MDN에선 property는 해당 object의 특징입니다. property는 보통 데이터 구조와 연관된 속성을 나타냅니다. property에는 2가지 종류가 있습니다. 인스턴스 프로퍼티(Instance property)들은 특정 object 인스턴스의 특정한 데이터를 가지고 있습니다. 정적 프로퍼티(Static Property)들은 모든 object 인스턴스들에게 공유 된 데이터를 가지고 있습니다.
+  MS에선 프로퍼티를 object를 위해서 데이터를 저장한다는 뜻으로 사용하고 있다.
+
+- OmitType은 base class에서 class를 만드는데 몇몇 field를 제외하고 만든다.
+
+```
+class CreateUserInput {
+  @Field()
+  email: string;
+
+  @Field()
+  password: string;
+
+  @Field()
+  firstName: string;
+}
+```
+
+- CreateUserInput은 email, password, firstName를 가지지만, email을 제외(omit)한다.
+
+```
+@InputType()
+export class UpdateUserInput extends OmitType(CreateUserInput, ['email'] as const) {}
+```
+
+- IntersectionType은 두 개의 input을 합쳐주는 역할을 한다.
+
+```
+@InputType()
+class CreateUserInput {
+  @Field()
+  email: string;
+
+  @Field()
+  password: string;
+}
+
+@ObjectType()
+export class AdditionalUserInfo {
+  @Field()
+  firstName: string;
+
+  @Field()
+  lastName: string;
+}
+```
+
+- CreateUserInput + AdditionalUserInfo
+
+```
+@InputType()
+export class UpdateUserInput extends IntersectionType(CreateUserInput, AdditionalUserInfo) {}
+```
+
+- Partial, Pick, Omit, Intersection 4가지가 조금 어려워서 찾아보았다. https://kyounghwan01.github.io/blog/TS/fundamentals/utility-types/#partial
+- Partial 파셜 타입은 특정 타입의 부분 집합을 만족하는 타입을 정의할 수 있습니다.
+- Pick 픽 타입은 특정 타입에서 몇 개의 속성을 선택하여 타입을 정의합니다.
+- Omit 특정 속성만 제거한 타입을 정의합니다.
+  pick의 반대
+
+- UpdateUserInput, IntersectionType 등은 모두 InputType을 만들어낸다.
+- restaurants.resolver.ts에 @Args() 안에 'input'을 집어 넣는다. argument를 input으로 바꾼다.
+- create-resturant.dto.ts에도 ArgsType을 @InputType()으로 고친다.
+- http://localhost:3000/graphql DOCS를 확인하면 arguments에 input: createRestaurantDto!이 되어있는 것을 확인할 수 있다.
+- create-resturant.dto.ts에 있는 모든 것을 지우고
+  id를 제외한 모든 것을 받게 OmitType으로 설정한다. restaurant를 생성할 때 id를 전달할 필요가 없기 때문이다.
+
+```
+@InputType()
+export class createRestaurantDto extends OmitType(Restaurant, ['id']) {}
+```
+
+- GraphQLError [Object]: Input Object type createRestaurantDto must define one or more fields.
+
+- 모든 base class들이 UpdateUserInput,CreateUserInput 등 InputType이다
+  하지만 Restaurant는 child class인 @InputType이 아니라 restaurants.entity.ts를 보면 parent class인 @ObjectType()이다.
+  그래서 create-resturant.dto.ts에서 Type을 바꿔줘야 한다.
+- 또 하나의 방법은 restaurants.entity.ts에서 @InputType을 추가해주는 것이다.
+- Error: Schema must contain uniquely named types but contains multiple types named "Restaurant".
+- 같은 데코레이터를 두 번 사용했기 때문에 좋지 않다.
+  이럴경우 isAbstract를 사용해줘야 한다. InputType이 스키마에 포함되지 않기를 원한다는 뜻이다. 어디서 복사해서 사용한다는 뜻이다. 직접 사용하는 게 아니라 어떤 것으로 확장시키는 것이다.
+
+```
+@InputType({isAbstract: true})
+
+```

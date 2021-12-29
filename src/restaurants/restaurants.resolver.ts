@@ -25,7 +25,7 @@ export class RestaurantReslover {
     @Args('address') address: string,
     @Args('ownerName') ownerName: string,
     */
-    @Args() createRestaurantDto: createRestaurantDto,
+    @Args('input') createRestaurantDto: createRestaurantDto,
   ): Promise<boolean> {
     // console.log(createRestaurantInput);
     // console.log(createRestaurantDto);
