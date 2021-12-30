@@ -1,5 +1,5 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { createRestaurantDto } from './dtos/create-resturant.dto';
+import { CreateRestaurantDto } from './dtos/create-resturant.dto';
 import { Restaurant } from './entities/restaurants.entity';
 import { RestaurantService } from './restaurants.service';
 
@@ -25,7 +25,7 @@ export class RestaurantReslover {
     @Args('address') address: string,
     @Args('ownerName') ownerName: string,
     */
-    @Args('input') createRestaurantDto: createRestaurantDto,
+    @Args('input') createRestaurantDto: CreateRestaurantDto,
   ): Promise<boolean> {
     // console.log(createRestaurantInput);
     // console.log(createRestaurantDto);

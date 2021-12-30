@@ -1199,8 +1199,8 @@ return this.restaurants.save(newRestaurant)
 - create-resturant.dto.ts에 categoryName을 추가하지 않았다. dto에 업데이트를 하지 않았다.
   entity를 수정하고 나서 복붙으로 해결 가능하다.
   매번을 복붙하면 비효율적이다. 코드로 접근을 한다.
-- ObjectType, Field @로 graphql 타입을 만들고 있다.
-- Entity, Column @로 DB 테이블도 만들고 있다.
+- ObjectType, Field 데코레이터(@)로 graphql 타입을 만들고 있다.
+- Entity, Column 데코레이터(@)로 DB 테이블도 만들고 있다.
 - 모든게 통합되기 때문에 graphql, Entity 수정할 필요가 없다. 하지만 문제는 dto가 Entity와 통합 생성되지 않는다.
 - Mapped types를 사용해서 Restaurant entity 파일 하나로 DB테이블. graphql 타입, dto 3가지 모두 생성하는 것으로 고쳐본다.
 - Mapped types는 base type을 바탕으로 다른 버전들을 만들 수 있게 해준다.
@@ -1337,3 +1337,53 @@ export class createRestaurantDto extends OmitType(Restaurant, ['id']) {}
 @InputType({isAbstract: true})
 
 ```
+
+# #3.6
+
+```
+mutation {
+  createRestaurant(input:{
+    name: "c",
+    isVegan: true,
+    address: "lalala",
+  })
+}
+```
+
+- "Field \"createRestaurantDto.ownerName\" of required type \"String!\" was not provided.",에러가 발생했다.
+- @IsString()을 추가해보았지만 해결되지 않았다.
+
+```
+mutation {
+  createRestaurant(input:{
+    name: "c",
+    isVegan: true,
+    address: "lalala",
+    ownerName: "kim",
+    categoryname: "la"
+  })
+}
+```
+
+```
+{
+  "errors": [
+    {
+      "message": "Bad Request Exception",
+      "extensions": {
+        "code": "BAD_USER_INPUT",
+        "response": {
+          "statusCode": 400,
+          "message": [
+            "name must be longer than or equal to 5 characters"
+          ],
+          "error": "Bad Request"
+        }
+      }
+    }
+  ],
+  "data": null
+}
+```
+
+- 다 입력해야 오류가 발생하지 않는다. 왜 그럴까?

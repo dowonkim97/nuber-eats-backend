@@ -27,13 +27,16 @@ export class Restaurant {
 
   @Field((type) => String)
   @Column()
+  @IsString()
   address: string;
 
   @Field((type) => String)
   @Column()
+  @IsString()
   ownerName: string;
 
   @Field((type) => String)
   @Column()
+  @IsString()
   categoryname: string;
 }
