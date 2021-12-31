@@ -1387,3 +1387,142 @@ mutation {
 ```
 
 - 다 입력해야 오류가 발생하지 않는다. 왜 그럴까?
+- https://stackoverflow.com/questions/56858461/cant-solve-playground-error-variable-input-of-required-type-memberinput?rq=1 콤마 문제인 줄 알았는데, 아닌 것 같다.
+- 내 생각엔 ownersName,categoryname 이 두 가지를 지우지 않아서 발생한 오류라고 생각한다. 강의에는 지우지 않았지만, 소스코드에는 지워져 있다.
+
+  ```
+  @Field((type) => String)
+  @Column()
+  @IsString()
+  ownersName: string;
+
+  @Field((type) => String)
+  @Column()
+  @IsString()
+  categoryname: string;
+  ```
+
+- 다시 에러 메세지로 돌아가서 name이 5글자보다 크거나 같아야 한다고 나온다는 말은 dto가 class validator에 의해서 validate(검증) 되고 있다는 뜻이다. 그리고 이 모든 것이 entity파일에 들어가 있다.
+
+```
+mutation {
+  createRestaurant(input: {
+    name: "real time",
+    isVegan: true,
+    address: "lalala"
+  })
+}
+```
+
+```
+{
+  "data": {
+    "createRestaurant": true
+  }
+}
+```
+
+- true로 출력된다. pgAdmin4 쿼리도구를 이용해서 검색해보았다. SELECT \* FROM name_of_table 인데
+  사용하고 있는 테이블은 restaurant 이니까 SELECT \* FROM restaurant으로 입력해서 실행하면 이름과 주소 등을 확인해볼 수 있다.
+- postico보다는 직관적이지 않아서 직접 입력해줘야 한다. 맥북프로 사고 싶다..
+- isVegan을 매번 true로 보내고 있는데, default 값을 이용해서 false면 false지만 아무것도 안 보내면 default를 true로 한다. dto validate(검증) 먼저 한다. @isOptional을 추가해준다. @isOptional는 값이 누락되었는지 확인하고, 없다면 모든 validator을 무시한다.
+
+```
+FieldOptions
+ name?: string;
+    description?: string;
+    deprecationReason?: string;
+    complexity?: Complexity;
+    middleware?: FieldMiddleware[];
+```
+
+- FieldOptions은 다음과 같고, graphql 스키마 기본값 true로 해준다.
+- localhost:3000/graphql을 보면 isVegan: Boolean = true로 나와있는 것을 확인할 수 있다. isVegan이 required가 아니게 되었다. 그래서 지우고 테스트 할 수 있다.
+
+```
+mutation {
+  createRestaurant(input: {
+    name: "without vegan",
+    address: "lalala"
+  })
+}
+```
+
+```
+{
+  "data": {
+    "createRestaurant": true
+  }
+}
+```
+
+- pgAdmin에도 추가된 것을 볼 수 있다.
+
+```
+mutation {
+  createRestaurant(input: {
+    name: "without vegan",
+    isVegan: "fdsfsfsff",
+    address: "lalala"
+  })
+}
+```
+
+```
+ "Boolean cannot represent a non boolean value: \"fdsfsfsff\"",
+```
+
+- validation 테스트도 해보면 정상적으로 된다.
+  graphql, database, validation 3번씩 테스트 것에 익숙해져야 한다.
+  ```
+  { defaultValue: true }
+  ```
+- defaultValue는 isVegan: Boolean = true로 나와있는 것처럼 isVegan을 정의해주지 않는 이상 isVegan이 true라고 나온다.
+- restaurants.resolver.ts에서 console.log(createRestaurantDto)를 해준다.
+
+```
+[Object: null prototype] {
+  name: 'korea',
+  isVegan: true,
+  address: 'lalala'
+}
+```
+
+- isVegan true를 보낸적이 없지만 defaultValue 덕분에 dto에 추가되어 있다.
+
+```
+mutation {
+  createRestaurant(input: {
+    name: "assda",
+    address: "lasdadlala"
+  })
+}
+```
+
+```
+[Object: null prototype] { name: 'assda', address: 'lasdadlala' }
+```
+
+- nullable은 dto 내용이 아예 없다.
+  콘솔에도 아무것도 안 나온다.
+
+  ```
+  { nullable: true, defaultValue: 'dsfsfs' }
+  ```
+
+  ```
+  GraphQLError [Object]: Boolean cannot represent a non boolean value: "dsfsfs"
+  ```
+
+- boolean이기 때문에 string 타입은 사용할 수 없다. nullable은 true나 false인 boolean만 가능하지만,
+
+- defaultValue는 아무거나 될 수 있다. defaultValue true나 false인 이유는 필드의 타입이 true(Boolean)이기 때문이다.
+
+```
+@Field((type) => String, { defaultValue: "그래"})
+  @Column()
+  @IsString()
+  address: string;
+```
+
+- 이렇게 하면 dto에 필드 내용을 추가할 수 있다. address: String = "그래"와 같이 나온다.
