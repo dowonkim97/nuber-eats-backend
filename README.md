@@ -1422,8 +1422,14 @@ mutation {
 }
 ```
 
-- true로 출력된다. pgAdmin4 쿼리도구를 이용해서 검색해보았다. SELECT _ FROM name_of_table 인데
-  사용하고 있는 테이블은 restaurant 이니까 SELECT _ FROM restaurant으로 입력해서 실행하면 이름과 주소 등을 확인해볼 수 있다.
+- true로 출력된다. pgAdmin4 쿼리도구를 이용해서 검색해보았다.
+
+```
+SELECT * FROM name_of_table
+```
+
+- 인데 사용하고 있는 테이블은 restaurant 이니까 SELECT \* FROM restaurant으로 입력해서 실행하면 이름과 주소 등을 확인해볼 수 있다.
+
 - postico보다는 직관적이지 않아서 직접 입력해줘야 한다. 맥북프로 사고 싶다..
 - isVegan을 매번 true로 보내고 있는데, default 값을 이용해서 false면 false지만 아무것도 안 보내면 default를 true로 한다. dto validate(검증) 먼저 한다. @isOptional을 추가해준다. @isOptional는 값이 누락되었는지 확인하고, 없다면 모든 validator을 무시한다.
 
