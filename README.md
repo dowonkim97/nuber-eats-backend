@@ -1484,7 +1484,13 @@ mutation {
   { defaultValue: true }
   ```
 - defaultValue는 isVegan: Boolean = true로 나와있는 것처럼 isVegan을 정의해주지 않는 이상 isVegan이 true라고 나온다.
-- restaurants.resolver.ts에서 console.log(createRestaurantDto)를 해준다.
+- restaurants.resolver.ts에서
+
+```
+console.log(createRestaurantDto)
+```
+
+를 해준다.
 
 ```
 [Object: null prototype] {
@@ -1532,3 +1538,95 @@ mutation {
 ```
 
 - 이렇게 하면 dto에 필드 내용을 추가할 수 있다. address: String = "그래"와 같이 나온다.
+
+# #3.7
+
+- restaurants.resolver.ts에서 restauant를 update하는 mutation을 만든다.
+
+```
+ @Mutation((returns) => Boolean)
+  async updateRestaurant() {}
+```
+
+- dtos 폴더에서 update-restaurant.dto.ts 파일을 생성하고, create-resturant.dto.ts를 보면 Restaurant에서 id를 제외한 OmitType으로 되어 있다. 이것을 update-restaurant에도 비슷하게 한다. PartialType을 사용한다. PartialType은 type의 선택적인 property이다라는 설명이 좀 어려워서 파셜 타입은 특정 타입의 부분 집합을 만족하는 타입이라고 하는 이 표현이 이해하기 좋은 것 같다.
+
+- update-restaurant.dto.ts에서 create-resturant.dto.ts를 PartialType으로 import 시켜준다.
+
+```
+@InputType()
+export class updateRestaurantDto extends PartialType(CreateRestaurantDto) {}
+```
+
+- resolver, mutation에 어떤 restaurant를 수정 할 것인지 알려주기 위해
+  id를 보내야 한다.
+- restaurants.resolver.ts에서 updateRestaurant안에 id에 해당하는 argument를 쓰고, number라고 알려준다.
+
+```
+    @Args('id') id: number,
+    @Args('data') data: updateRestaurantDto,
+```
+
+- restaurant를 update하려면
+
+```
+mutation {
+  updateRestaurant(data: {name: "real time"}, id:1)
+}
+```
+
+- "message": "Cannot return null for non-nullable field Mutation.updateRestaurant." 리턴(return)을 하지 않아서 에러가 발생했다.
+
+```
+  async updateRestaurant(
+    @Args('id') id: number,
+    @Args('data') data: updateRestaurantDto,
+  ) {
+    return true;
+  }
+```
+
+- 많은 Argument를 주는 것보다 class로 dto 하나만 만드는 것을 선호한다.
+
+```
+{
+  "data": {
+    "updateRestaurant": true
+  }
+}
+```
+
+- 그렇기 때문에 id와 UpdateRestaurantDto를 합친다.
+- Restaurant이 아닌 CreateRestaurantDto를 PartialType으로 하는 이유는 updateRestaurantDto에 id가 꼭 필요하기 때문이다.
+- Restaurant을 PartialType으로 만들면 id도 옵션사항이 되기 때문에 CreateRestaurantDto를 PartialType으로 한다.
+
+- update-restaurant.dto.ts에서 ArgsType을 만들었기 때문에
+
+```
+  async updateRestaurant(@Args() updateRestaurantDto: updateRestaurantDto) {
+```
+
+- restaurants.resolver.ts에서 다음과 같이 변경해준다.
+  이렇게 하면 updateRestaurantDto에 InputType이 필요 없게 되고 ArgsType만 있으면 되게 된다.
+- InputType은 data Field에 있고, data Field는 updateRestaurantDto 안에 있다. 이게 ArgsType이 된다.
+- InputType을 사용한다면 argument에 이름이 있어야 한다.
+
+```
+@Args("input") // argument name
+```
+
+= @Argstype을 사용한다면 argument에 이름이 없어야 한다.
+
+```
+@Args("") // argument name empty
+```
+
+- @InputType()으로 고쳐준다.
+  localhost:3000/graphql에서 다음과 같이 확인한다.
+
+```
+ updateRestaurant(...): Boolean!
+ input: updateRestaurantDto!
+type updateRestaurantDto {
+ id: Float!
+ data: updateRestaurantInputType!
+```

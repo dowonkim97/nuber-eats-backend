@@ -18,7 +18,7 @@ export class Restaurant {
   @Length(5)
   name: string;
   // isGood이라는 1개의 필드를 가지고 있다. (제거함)
-  @Field((type) => Boolean, { nullable: true }) // graphql 스키마에서 기본값 true
+  @Field((type) => Boolean, { nullable: true }) // graphql 스키마에서 기본값 true -> { nullable: true }
   @Column({ default: true }) // database를 기본값 true
   @IsOptional() // vaidation은 optional
   @IsBoolean() // value가 있으면 boolean
