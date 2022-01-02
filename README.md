@@ -1557,8 +1557,7 @@ mutation {
 export class updateRestaurantDto extends PartialType(CreateRestaurantDto) {}
 ```
 
-- resolver, mutation에 어떤 restaurant를 수정 할 것인지 알려주기 위해
-  id를 보내야 한다.
+- resolver, mutation에 어떤 restaurant를 수정 할 것인지 알려주기 위해 id를 보내야 한다.
 - restaurants.resolver.ts에서 updateRestaurant안에 id에 해당하는 argument를 쓰고, number라고 알려준다.
 
 ```
@@ -1630,3 +1629,102 @@ type updateRestaurantDto {
  id: Float!
  data: updateRestaurantInputType!
 ```
+
+# #3.8
+
+- updateRestaurantDto를 사용한다.
+- service에 resolver를 연결시킨다.
+- restaurants.service.ts에서 updateRestaurant fuction을 만들어준다. updateRestaurantDto를 가진다.
+
+```
+  updateRestaurant(updateRestaurantDto: UpdateRestaurantDto);
+
+```
+
+- update-restaurant.dto.ts와 restaurants.resolver.ts에서 updateRestaurantDto를 UpdateRestaurantDto로 대문자로 변경해주었다.
+
+- UpdateRestaurantInputType의 export를 제거한다. 꺼내서 사용하지 않으니까 제거해준 것 같다.
+
+- restaurants.service.ts updateRestaurant()안에 restaurant repository에서 update method를 사용한다.
+
+```
+ this.restaurants.update()
+```
+
+- update(criteria: string | number | Date | ObjectID | string[] | number[] | Date[] | ObjectID[] | FindConditions<Restaurant>, partialEntity: QueryDeepPartialEntity<...>
+- 기준(criteria)이나 특징 같이 update하고 싶은 data, entity의 필드를 보내야 한다. 기준(criteria)은 id를 넣는다.
+
+```
+  updateRestaurant({ id, data }: UpdateRestaurantDto) {
+    this.restaurants.update(id, {...data});
+  }
+```
+
+- updateRestaurantDto를 지우고 { id }를 넣어주고,
+  update() 괄호안에 UpdateRestaurantDto.id 대신 id만 넣어준다. update 하고자하는 object인 data를 받아온다.
+  {...data}는 삼항연산자로 data의 content(내용)을 가져온다.
+- update()는 Promise를 반환(return)한다. 왜냐하면
+  데이터베이스에 해당 entity가 있는지 확인하지 않고 update query를 실행한다.
+
+```
+  updateRestaurant({ id, data }: UpdateRestaurantDto) {
+    this.restaurants.update({name: "lalala"}, {...data});
+  }
+```
+
+- name이 "lalala"라는 사람을 data로 restaurants에서 update한다.
+- update method는 restaurants가 db에 있는지 없는 지 신경 쓰지 않는다. query를 update할 때 사용한다. restaurant이 존재하는 지 확인하지 않는다.
+
+```
+  this.restaurants.update(id, {...data})
+```
+
+- 더 빠르게 동작하니까 존재하지 않는 id를 넣어도 에러가 나오지 않는다.
+- SQL로 된 query가 id 20000인 restaurant로 update한다.
+- restaurants.service.ts에서 restaurant를 update한다.
+- restaurants.resolver.ts에서 아래 코드와 같이 고친다.
+
+```
+Promise<boolean> {
+    try {
+      await this.restaurantService.updateRestaurant(updateRestaurantDto);
+      return true;
+    } catch (e) {
+      console.log(e);
+      return false;
+    }
+  }
+```
+
+- localhost:3000/graphql에서 restaurant를 update한다.
+
+```
+mutation {
+	updateRestaurant(input: {
+    id:5,
+    data:{name: "Updated!!",
+    isVegan: false}
+  })
+}
+```
+
+- mutation {
+  updateRestaurant(input: {
+  id:5,
+  data:{name: "Updated!!",
+  isVegan: false}
+  })
+  }
+
+- pgAdmin에서 확인해본 결과
+  Updated!!, false, 그래 등 모두 업데이트 되었다.
+
+```
+{
+  "data": {
+    "updateRestaurant": true
+  }
+}
+```
+
+- 잘못된 id를 입력해도 위와 같이 true로 나온다.
