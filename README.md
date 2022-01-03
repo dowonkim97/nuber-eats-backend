@@ -1672,7 +1672,7 @@ type updateRestaurantDto {
   }
 ```
 
-- name이 "lalala"라는 사람을 data로 restaurants에서 update한다.
+- name이 "lalala"라는 사람을 data로 restaurants에서 update 할 수도 있다.
 - update method는 restaurants가 db에 있는지 없는 지 신경 쓰지 않는다. query를 update할 때 사용한다. restaurant이 존재하는 지 확인하지 않는다.
 
 ```
@@ -1728,3 +1728,24 @@ mutation {
 ```
 
 - 잘못된 id를 입력해도 위와 같이 true로 나온다.
+
+# #4.0
+
+- User Model(id, createdAt, updatedAt, email, password, role(client | owner | delivery)
+- User CRUD( Create Account, Log In, See Profile, Edit Profile, Verify Email)
+- 배우는 것들 :
+- User Model은 너무 많이 가지고 있어 module 중 가장 느리다.
+- relationship, columns 이용해서 모델을 만든다.
+- account를 만든다는 것은 password hash, 검증 하는 방법을 배운다.
+- Log In, account는 인증(authentication), 권한부여(authorization) 방법을 배운다.
+- guards, middlewares, metadata와 같은 것을 배운다.
+- 우리만의 decorators를 만든다.
+- 충분하지 않으면 테스팅한다. 하지만 아직 GraphQL resolver를 테스트 하는 방법을 모른다. unit, end-to-end testing도 아직 모른다.
+- User 다음 restaurant, order, payment를 진행할 예정이다.
+
+# #4.1
+
+- nest g mo users (vscode 터미널)
+- users 모듈을 만든다. App module을 바꿔야 한다.
+- app.module.ts에서 RestaurantsModule, entities: [Restaurant]을 지워준다.
+- users 폴더에 entities 폴더와 users.entity.ts파일을 생성해준다.
