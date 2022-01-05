@@ -7,6 +7,8 @@ import { RestaurantsModule } from './restaurants/restaurants.module';
 import * as Joi from 'joi';
 import { Restaurant } from './restaurants/entities/restaurants.entity';
 import { UsersModule } from './users/users.module';
+import { CommonModule } from './common/common.module';
+import { User } from './users/entities/users.entity';
 
 // console.log(Joi);
 
@@ -34,12 +36,13 @@ import { UsersModule } from './users/users.module';
       database: process.env.DB_NAME,
       synchronize: process.env.NODE_ENV !== 'prod',
       logging: process.env.NODE_ENV !== 'prod',
-      entities: [],
+      entities: [User],
     }),
     GraphQLModule.forRoot({
       autoSchemaFile: true,
     }),
     UsersModule,
+    CommonModule,
   ],
   controllers: [],
   providers: [],

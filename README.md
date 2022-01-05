@@ -1763,8 +1763,78 @@ export class User {}
 - 모든 entity들은 (ID, createdAt, updatedAt)을 가진다. 반복하지 않기 위해서 나중에 다룬다.
 - (email, password, role)을 먼저 다룬다. 이것은 모두 string 타입(type)이다.
 
-- 룰(role)은 account는 서로 role을 가진다. 3개의 룰(role)을 가진다.
+- 룰(role)은 entity가 관계(relationship)에서 수행하는 기능을 role이라고 한다. https://ganghee-lee.tistory.com/20 참고함.
+
+. 3개의 룰(role)을 가진다.
+
 - 무엇으로 등록하건 원하는 것을 볼 수 있다.
-- 하나는 사용자(user), 손님이다. client는 레스토랑 리스트를 볼 수 있다.
-- 레스토랑을 등록하고 싶으면 owner로 등록할 수 있다. owner은 대시보드를 볼 수 있다.
-- 배달원으로 등록할 수도 있다. delivery(배달원)은 현재 갈 수 있는 모든 주문의 실시간 상황을 볼 수 있다.
+- 1. 사용자(user), 손님이다. client는 레스토랑 리스트를 볼 수 있다.
+- 2. 레스토랑을 등록하고 싶으면 owner로 등록할 수 있다. owner은 대시보드를 볼 수 있다.
+- 3. 배달원으로 등록할 수도 있다. delivery(배달원)은 현재 갈 수 있는 모든 주문의 실시간 상황을 볼 수 있다.
+
+```
+type UserRole = 'client' | 'owner' | 'delivery';
+
+@Entity()
+export class User {
+  @Column()
+  email: string;
+
+  @Column()
+  password: string;
+
+  @Column()
+  role: UserRole;
+}
+```
+
+- Column과 email과 password를 추가해주고,
+  role을 추가해주고 role에는 UserRole type에는 client, owner, delivery 3가지 타입을 작성해준다.
+
+- id, createdAt, updatedAt를 하기 위해서 common이란 module을 생성한다. common에는 기본적으로 app에서 공유하는 모든 것이 commonModule에 적용된다.
+- nest g mo common (vscode 터미널)
+- common 폴더에 entity 폴더와 core.entity.ts 파일을 만들어준다.
+
+```
+export class CoreEntity {
+  @PrimaryGeneratedColumn()
+  id: number;
+}
+```
+
+- core.entity.ts CoreEntity class를 만들어주고 PrimaryGeneratedColumn 데코레이터를 넣어주고 id type을 입력해준다.
+- @PrimaryGeneratedColumn은 특정 클래스 속성을 테이블 열로 표시하는 데 사용된다.
+- @Column()의 옵션인 primary를 대체할 수 있다. Primary Key를 만드는 역할을 한다.
+- 자동생성되는 ID값을 표현하는 방식을 아래와 같이 2가지 옵션을 사용할 수 있도록 도와준다.
+- increment: AUTO_INCREMENT를 사용해서 1씩 증가하는 ID를 부여하는 기본 옵션이다.
+- uuid: 유니크한 uuid를 사용할 수 있다.
+- https://yangeok.github.io/orm/2020/12/14/typeorm-decorators.html 나중에 시간되면 더 읽어봐야겠다. 잘 작성되어 있다.
+
+```
+export class User extends CoreEntity {
+}
+```
+
+- CoreEntity를 확장(extends)해서 import 해준다.
+- 만드는 모든 entity는 CoreEntity에서 확장(extends)된다.
+
+```
+  @CreateDateColumn()
+  createdAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
+```
+
+- CreateDateColumn은 해당 열이 추가된 시각을 자동으로 기록합니다. 옵션을 적지 않을시 datetime 타입으로 기록됩니다.
+- UpdateDateColumn 해당 열이 수정된 시각을 자동으로 기록합니다. 옵션을 적지 않을시 datetime 타입으로 기록됩니다.
+- https://yangeok.github.io/orm/2020/12/14/typeorm-decorators.html 참고함
+
+```
+      entities: [User],
+```
+
+- app.module.ts에서 entities에서 User을 추가해준다.
+- pgAdmin4에서 확인해보면 id, createdAt
+  updatedAt, email, password, role을 가지고 있는 것을 확인할 수 있다.
+- GraphQLError [Object]: Query root type must be provided. (console 에러) (원인 resolver 작업을 아직 하지 않음)
+- 이제 CRUD{Create(생성), Read(읽기), Update(갱신), Delete(삭제)}를 가지고 시작할 수 있다.
