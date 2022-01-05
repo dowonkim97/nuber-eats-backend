@@ -1747,9 +1747,10 @@ mutation {
 
 - nest g mo users (vscode 터미널)
 - users 모듈을 만든다. App module을 바꿔야 한다.
-- app.module.ts에서 RestaurantsModule, entities의 [Restaurant] [] 안에 있는 Restaurant을 지워준다.
+- app.module.ts에서 RestaurantsModule과 entities의 [Restaurant] 엔티티 위치를 변경하기 위해 [] 안에 있는 Restaurant을 지워준다.
+
 - users 폴더에 entities 폴더와 users.entity.ts파일을 생성해준다.
-- users.entity.ts에는 user와 entity를 만들어준다.
+- users.entity.ts에는 User class와 @Entity를 만들어준다.
 
 ```
 @Entity()
@@ -1793,7 +1794,7 @@ export class User {
 
 - id, createdAt, updatedAt를 하기 위해서 common이란 module을 생성한다. common에는 기본적으로 app에서 공유하는 모든 것이 commonModule에 적용된다.
 - nest g mo common (vscode 터미널)
-- common 폴더에 entity 폴더와 core.entity.ts 파일을 만들어준다.
+- common 폴더에 entities 폴더와 core.entity.ts 파일을 만들어준다.
 
 ```
 export class CoreEntity {
@@ -1825,6 +1826,7 @@ export class User extends CoreEntity {
   updatedAt: Date;
 ```
 
+- 위의 코드는 core.entity.ts CoreEntity 아랫줄에 추가해준다.
 - CreateDateColumn은 해당 열이 추가된 시각을 자동으로 기록합니다. 옵션을 적지 않을시 datetime 타입으로 기록됩니다.
 - UpdateDateColumn 해당 열이 수정된 시각을 자동으로 기록합니다. 옵션을 적지 않을시 datetime 타입으로 기록됩니다.
 - https://yangeok.github.io/orm/2020/12/14/typeorm-decorators.html 참고함
