@@ -1731,7 +1731,7 @@ mutation {
 
 # #4.0
 
-- User Model(id, createdAt, updatedAt, email, password, role(client | owner | delivery)
+- User Entity(id, createdAt, updatedAt, email, password, role(client | owner | delivery)
 - User CRUD( Create Account, Log In, See Profile, Edit Profile, Verify Email)
 - 배우는 것들 :
 - User Model은 너무 많이 가지고 있어 module 중 가장 느리다.
@@ -1747,5 +1747,24 @@ mutation {
 
 - nest g mo users (vscode 터미널)
 - users 모듈을 만든다. App module을 바꿔야 한다.
-- app.module.ts에서 RestaurantsModule, entities: [Restaurant]을 지워준다.
+- app.module.ts에서 RestaurantsModule, entities의 [Restaurant] [] 안에 있는 Restaurant을 지워준다.
 - users 폴더에 entities 폴더와 users.entity.ts파일을 생성해준다.
+- users.entity.ts에는 user와 entity를 만들어준다.
+
+```
+@Entity()
+export class User {}
+
+```
+
+- entity의 계획
+- (id, createdAt, updatedAt)은 entity 어디에나 있을 필드(field)이다.
+- user, resturant, order, payment entity들이 ID를 가질 것이다.
+- 모든 entity들은 (ID, createdAt, updatedAt)을 가진다. 반복하지 않기 위해서 나중에 다룬다.
+- (email, password, role)을 먼저 다룬다. 이것은 모두 string 타입(type)이다.
+
+- 룰(role)은 account는 서로 role을 가진다. 3개의 룰(role)을 가진다.
+- 무엇으로 등록하건 원하는 것을 볼 수 있다.
+- 하나는 사용자(user), 손님이다. client는 레스토랑 리스트를 볼 수 있다.
+- 레스토랑을 등록하고 싶으면 owner로 등록할 수 있다. owner은 대시보드를 볼 수 있다.
+- 배달원으로 등록할 수도 있다. delivery(배달원)은 현재 갈 수 있는 모든 주문의 실시간 상황을 볼 수 있다.
