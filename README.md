@@ -1840,3 +1840,63 @@ export class User extends CoreEntity {
   updatedAt, email, password, role을 가지고 있는 것을 확인할 수 있다.
 - GraphQLError [Object]: Query root type must be provided. (console 에러) (원인 resolver 작업을 아직 하지 않음)
 - 이제 CRUD{Create(생성), Read(읽기), Update(갱신), Delete(삭제)}를 가지고 시작할 수 있다.
+
+# #4.2
+
+- resolver를 만들어본다.
+- users폴더 안에 users.resolver.ts와 users.service.ts 파일을 만든다.
+- service는 repository를 필요로 한다.
+- users.module에서 특정 feature을 import 할 수 있게 해주는 forFeature을 사용해 User를 랩핑(wrapping)해준다.
+
+```
+  imports: [TypeOrmModule.forFeature([User])],
+```
+
+- imports와 providers 차이는 다음과 같다.
+- imports : 해당 모듈에서 필요한 export된 provider 리스트를 의미한다.
+- providers : Nest injector(의존성을 주입하는 Nest 내부 모듈)에 의해 인스턴스화 되는 provider를 의미한다. 해당 모듈을 통해 공유되는 비즈니스 로직이라고 생각하면 좋다.
+- https://www.wisewiredbooks.com/nestjs/overview/05-modules.html
+  (imports, providers 검색)
+- 인스턴스화 : 클래스로부터 객체를 만드는 과정
+- https://hungryboy.tistory.com/18 (인스턴스화 검색)
+- users.service.ts에 아래와 같이 constructor을 만들어준다.
+
+```
+@Injectable()
+export class UserService {
+  constructor(
+    @InjectRepository(User) private readonly users: Repository<User>,
+  ) {}
+}
+```
+
+- InjectRepository 데코레이터를 통해 User Entity 를 users를 UserService에 주입하여 사용하는 모습이다.
+- https://medium.com/crocusenergy/nestjs-typeorm-%EA%B8%B0%EB%B3%B8-crud-%EC%9E%91%EC%84%B1%ED%95%98%EA%B8%B0-69b9640dc826 (InjectRepository 검색)
+
+```
+@Resolver((of) => User) // of가 function 이거나 없어도 된다.
+export class UsersResolver {
+  constructor(private readonly usersService: UsersService) {}
+}
+```
+
+- Resolver 데코레이터를 통해 usersService를 UsersResolver에 주입하여 사용하는 모습이다.
+
+```
+  providers: [UsersResolver, UsersService],
+```
+
+- users.module.ts에서는 providers를 restaurants.module.ts에서 한 것과 같이 UsersResolver, UsersService를 넣어준다.
+
+- GraphQLError [Object]: Query root type must be provided.(console 에러) (원인 query를 resolver에 만들어주지 않았다.)
+
+- users.resolver.ts에서 UsersResolver안에 Query를 입력해준다.
+
+```
+  @Query((returns) => Boolean)
+  hi() {
+    return true;
+  }
+```
+
+http://localhost:3000/graphql DOCS에서 hi: Boolean!이 나타나는 것을 확인할 수 있다.
