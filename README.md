@@ -1870,6 +1870,10 @@ export class UserService {
 }
 ```
 
+- @InjectRepository는 클래스를 공급자로 표시하는 데코레이터입니다. Nest의 내장 DI(Dependency Injection) 시스템을 사용하여 생성자 매개변수 주입을 통해 공급자를 다른 클래스에 주입할 수 있습니다.
+
+공급자를 주입할 때 표시되어야 합니다.
+
 - InjectRepository 데코레이터를 통해 User Entity 를 users를 UserService에 주입하여 사용하는 모습이다.
 - https://medium.com/crocusenergy/nestjs-typeorm-%EA%B8%B0%EB%B3%B8-crud-%EC%9E%91%EC%84%B1%ED%95%98%EA%B8%B0-69b9640dc826 (InjectRepository 검색)
 
@@ -1900,3 +1904,79 @@ export class UsersResolver {
 ```
 
 http://localhost:3000/graphql DOCS에서 hi: Boolean!이 나타나는 것을 확인할 수 있다.
+
+# #4.3
+
+- User graphQL object를 만들고 나서 Create Account Mutation을 위한 DTO를 만든다.
+- users.entity.ts에서 @ObjectType, @InputType와 isAbstract: true를 추가해준다.
+
+```
+@InputType({ isAbstract: true })
+@ObjectType()
+```
+
+- users.entity @Field 타입을 ;없이 String, core.entity의 @Field 타입을 ;없이 (id) => Number, (createdAt, updatedAt) => Date으로 입력해준다.
+
+```
+  @Field((type) => String)
+  @Field((type) => Number)
+  @Field((type) => Date)
+```
+
+- 이제 DTO를 만든다 users.resolver.ts에서 첫번 째 Mutation을 임시로 만든다.
+
+```
+  @Mutation((returns) => Boolean)
+  createAccount(@Args('input') createAccountInput:);
+```
+
+- InputType을 createAccountInput으로 만든다.
+- users폴더에 dtos폴더를 생성한다.
+- DTO가 뭔지 까먹었다. 여기에 계층간 데이터 교환을 위한 객체라고 자세하고 친절하게 나와있다. 그외에도 DAO, Entity class 등 나와 있다. 최고인 듯 https://gmlwjd9405.github.io/2018/12/25/difference-dao-dto-entity.html (dto 검색)
+- create-account.dto.ts에서 입력, 출력 2개의 DTO를 만든다.
+
+```
+export class createAccountInput extends PickType(User, [
+  'email',
+  'password',
+  'role',
+]) {}
+```
+
+- Mapped types인 PickType을 사용한다.
+- createAccountInput을 User와 email, password, role을 선택(Pick)타입으로 만들었다. create Account DTO라고 불러도 된다.
+
+```
+@ObjectType()
+export class createAccountOutput {
+  @Field((type) => String, { nullable: true })
+  error?: string;
+  @Field((type) => Boolean)
+  ok: boolean;
+}
+```
+
+- createAccountOutput 만들고, ok, error 등 @Field 타입과 메소드에서 null값을 허용할 경우 보여주는 표시인 nullable로 입력해준다.
+- https://hashcode.co.kr/questions/974/nullable-%EC%96%B4%EB%85%B8%ED%85%8C%EC%9D%B4%EC%85%98%EC%9D%98-%EC%93%B0%EC%9E%84 (nullable 검색)
+
+- Unexpected empty method 'createAccount'.eslint@typescript-eslint/no-empty-function 하는 도중에 에러가 발생했다.
+- .eslintrc.js에서 아래 코드를 추가해줬다.
+
+```
+    '@typescript-eslint/no-empty-function': 'off',
+```
+
+- https://dev-yakuza.posstree.com/ko/react-native/eslint-prettier-husky-lint-staged/ (no-empty-function 검색)
+
+```
+@Mutation((returns) => createAccountOutput)
+  createAccount(@Args('input') createAccountInput: createAccountInput) {}
+```
+
+- users.resolver.ts에서 임시로 적은 Boolean 대신 createAccountOutput, createAccountInput을 넣어준다.
+- Error: Cannot determine a GraphQL input type ("createAccountInput") for the "input". Make sure your
+  class is decorated with an appropriate decorator.
+  GrapQL input type을 정할 수 없습니다. class는 적절한 데코레이터로 꾸며줘야 합니다.
+- create-account.dto.ts에서 @InputType을 넣어준다.
+- http://localhost:3000/graphql DOCS TYPE DETAILS에서 role: String!을 3가지 옵션만 가능한 것으로 바꿔줄 수 있다.
+- 나중에는 CreateAccountOutput을 commonModule에 넣을 수도 있다.
