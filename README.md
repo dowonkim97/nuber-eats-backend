@@ -1959,6 +1959,11 @@ export class createAccountOutput {
 - createAccountOutput 만들고, ok, error 등 @Field 타입과 메소드에서 null값을 허용할 경우 보여주는 표시인 nullable로 입력해준다.
 - https://hashcode.co.kr/questions/974/nullable-%EC%96%B4%EB%85%B8%ED%85%8C%EC%9D%B4%EC%85%98%EC%9D%98-%EC%93%B0%EC%9E%84 (nullable 검색)
 
+```
+@Mutation((returns) => createAccountOutput)
+  createAccount(@Args('input') createAccountInput: createAccountInput) {}
+```
+
 - Unexpected empty method 'createAccount'.eslint@typescript-eslint/no-empty-function 하는 도중에 에러가 발생했다.
 - .eslintrc.js에서 아래 코드를 추가해줬다.
 
@@ -1968,15 +1973,146 @@ export class createAccountOutput {
 
 - https://dev-yakuza.posstree.com/ko/react-native/eslint-prettier-husky-lint-staged/ (no-empty-function 검색)
 
-```
-@Mutation((returns) => createAccountOutput)
-  createAccount(@Args('input') createAccountInput: createAccountInput) {}
-```
-
 - users.resolver.ts에서 임시로 적은 Boolean 대신 createAccountOutput, createAccountInput을 넣어준다.
 - Error: Cannot determine a GraphQL input type ("createAccountInput") for the "input". Make sure your
   class is decorated with an appropriate decorator.
   GrapQL input type을 정할 수 없습니다. class는 적절한 데코레이터로 꾸며줘야 합니다.
-- create-account.dto.ts에서 @InputType을 넣어준다.
+- create-account.dto.ts에서 @InputType @ObjectType을 넣어준다.
 - http://localhost:3000/graphql DOCS TYPE DETAILS에서 role: String!을 3가지 옵션만 가능한 것으로 바꿔줄 수 있다.
 - 나중에는 CreateAccountOutput을 commonModule에 넣을 수도 있다.
+
+# #4.4
+
+- userRole을 enum이라는 type으로 변경한다.
+
+- enum은 열거하다(나란히 늘어놓다)(enumerable)이다.
+- enum으로 불리는 object 같은 것이다.
+- 아래 코드처럼 Direction을 열거할 수 있다.
+
+```
+enum Direction {
+  Up,
+  Down,
+  Left,
+  Right,
+}
+```
+
+- 위 코드에서 Up이 1 로 초기화된 숫자 열거형을 선언했다. 그 지점부터 뒤따르는 멤버들은 자동으로 증가된 값을 갖는다. 즉 Direction.Up 은 1, Down 은 2, Left 는 3, Right 은 4 을 값으로 가진다.
+- https://www.typescriptlang.org/ko/docs/handbook/enums.html (enum typescript 검색)
+
+- users.entity.ts에서 type UserRole을 지운다.
+
+```
+type UserRole = 'client' | 'owner' | 'delivery';
+```
+
+- enum UserRole로 바꿔주고, { Client, Owner, Delivery }를 넣어준다.
+
+```
+  (enum member) UserRole.Client = 0
+  (enum member) UserRole.Owner = 1
+  (enum member) UserRole.Delivery = 2
+```
+
+- DB안에 UserRole로 0,1,2 와 같이 나란히 나열된다.
+- 코드로 UserRole.Client, Owner, Delivery 등을 쓸 수 있다는 것을 의미한다.
+
+```
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+  })
+```
+
+- Column() 안에 type을 'enum'으로 전달해주고 enum: UserRole이 된다.
+
+```
+  @Field((type) => UserRole)
+registerEnumType(UserRole, { name: 'UserRole' });
+```
+
+- GraphQL에도 enum을 registerEnumType()으로 enumRef는 UserRole, 이름은 UserRole로 만들어준다.
+- @Field도 UserRole로 만들어준다.
+
+```
+  @Field((type) => UserRole)
+```
+
+- type UserRole이 graphQL을 가지고 있다.
+
+```
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+  })
+```
+
+- DB에는 type이 enum인 UserRole이 있다.
+
+```
+enum UserRole {
+Client
+Owner
+Delivery
+}
+```
+
+- http://localhost:3000/graphql DOCS에서 role: UserRole! ENUM DETAILS에서 enum 3가지 옵션만 가진 것을 확인할 수 있다.
+- users.service.ts에서 service에서 createAccount()는 createAccountInput을 받게되고, type은 createAccountInput이 된다.
+
+```
+  createAccount(createAccountInput: createAccountInput) {
+  }
+```
+
+- 새로운 user인지 확인한다.
+- 새로운 user을 만들어주고, 비밀번호를 hash 해준다.
+- 모든 것이 true이면, ok return해주고, false이면 error return해준다.
+
+```
+  async createAccount({email, password, role}: createAccountInput) {
+    try {
+      const exists = await this.users.findOne({ email });
+      // user exist check
+    if(exists) {
+      // make error
+      return;
+    }
+    await this.users.save(this.users.create({ email, password, role }));
+    return true;
+    } catch(e) {
+      return;
+    }
+  }
+```
+
+- ES6 기능을 활용해 위 코드처럼 변경한다.
+- async/await과 try~catch를 사용한다.
+- findOne()은 주어진 환경(condition)과 일치하는 첫 번째 entity를 찾는다.
+- findOne()은 사용자를 찾기 위해 많은 옵션 개체를 사용하는데 email, id, username 등을 사용하여 검색할 수 있다.
+- if(exists)로 에러를 만들고 return 해준다.
+- this.users.create()와 save()는 다르다.
+- create()는 객체를 만들기만 하고 DB에 직접적으로 저장하지 않는다.
+- https://popawaw.tistory.com/173 (this.users.save create 검색)
+- save()는 DB에 직접 저장한다.
+- this.users.save()안에 create()를 만들어준다.
+- create()안에는 email, password, role를 넣어준다.
+
+```
+ Promise<Entity | undefined>
+```
+
+- findOne()은 Promise Entity 또는 undefined로 return한다.
+- tryCatch.ts 만든 다음 데코레이터 만들고 사용하는 방법을 모르겠다.
+
+```
+  @Query(() => LoginOutput)
+  @TryCatch('유효하지 않은 접근입니다.')
+  async login(@Args('token') token: string) {
+return await this.userService.login(token);
+  }
+}
+```
+
+- 위 코드의 방식은 사용 방법을 아직 잘 모르겠다 방법을 찾아 고민해봐야겠다.
