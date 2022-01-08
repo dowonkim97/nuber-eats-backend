@@ -2010,6 +2010,14 @@ type UserRole = 'client' | 'owner' | 'delivery';
 - enum UserRole로 바꿔주고, { Client, Owner, Delivery }를 넣어준다.
 
 ```
+enum UsersRole {
+  Client,
+  Owner,
+Delivery
+}
+```
+
+```
   (enum member) UserRole.Client = 0
   (enum member) UserRole.Owner = 1
   (enum member) UserRole.Delivery = 2
@@ -2025,14 +2033,14 @@ type UserRole = 'client' | 'owner' | 'delivery';
   })
 ```
 
-- Column() 안에 type을 'enum'으로 전달해주고 enum: UserRole이 된다.
+- users.entity.ts Column() 안에 type을 'enum'으로 전달해주고 enum: UserRole이 된다.
 
 ```
   @Field((type) => UserRole)
 registerEnumType(UserRole, { name: 'UserRole' });
 ```
 
-- GraphQL에도 enum을 registerEnumType()으로 enumRef는 UserRole, 이름은 UserRole로 만들어준다.
+- GraphQL에도 enum을 users.entity.ts에 registerEnumType()으로 enumRef는 UserRole, 이름은 UserRole로 만들어준다.
 - @Field도 UserRole로 만들어준다.
 
 ```
@@ -2097,7 +2105,7 @@ Delivery
 - https://popawaw.tistory.com/173 (this.users.save create 검색)
 - save()는 DB에 직접 저장한다.
 - this.users.save()안에 create()를 만들어준다.
-- create()안에는 email, password, role를 넣어준다.
+- create({})안에는 email, password, role를 넣어준다.
 
 ```
  Promise<Entity | undefined>
