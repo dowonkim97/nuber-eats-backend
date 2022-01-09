@@ -2124,3 +2124,155 @@ return await this.userService.login(token);
 ```
 
 - 위 코드의 방식은 사용 방법을 아직 잘 모르겠다 방법을 찾아 고민해봐야겠다.
+
+# #4.5
+
+- Go는 error를 return하지만, TS는 throw error 해야 한다.
+- 만약에 에러를 throw, raise 같이 error을 강제로 일으키지 않는다면, resolver에서 어떤일을 해야 할까?
+
+```
+try {
+      const error = await this.usersService.createAccount(createAccountInput);
+      if (error) {
+        return {
+          ok: false,
+          error,
+        };
+      }
+    } catch (e) {}
+```
+
+- async/await을 하고, try/catch를 한다.
+- error가 있으면 ok false, error로 반환(return)되게 error 처리를 해준다.
+
+```
+ async createAccount(
+    @Args('input') createAccountInput: createAccountInput,
+  ): Promise<createAccountOutput>
+```
+
+- Promise<>와 createAccountOutput을 추가해서 function을 수정한다.
+
+```
+ return {
+       ok: true,
+     };
+  catch (error) {
+  return {
+    error: error,
+    ok: false,
+  };
+```
+
+- ok true로 반환(return)되고, catch에서는 error: error, ok: false로 반환되게 error 처리를 해준다.
+- users.service.ts에서 createAccount를 변경한다.
+
+```
+ async createAccount({
+    email,
+    password,
+    role,
+  }: createAccountInput): Promise<string | undefined>
+```
+
+- Promise<>와 string이나 undefined를 return 해준다.
+
+```
+  async createAccount({
+    email,
+    password,
+    role,
+  }: createAccountInput): Promise<string | undefined> {
+    try {
+      // email을 가지고 있는 지 확인
+      const exists = await this.users.findOne({ email });
+      // user가 존재한다면, string을 return한다.
+      if (exists) {
+        return '해당 이메일을 가진 사용자가 이미 존재합니다.';
+      }
+      // else면 아무것도 return 하지 않는다.
+      // 인스턴스를 만들고 난 뒤 user를 동시에 저장(save)한다.
+      await this.users.save(this.users.create({ email, password, role }));
+      // 에러가 있으면 string을 return한다.
+      return '계정을 생성할 수 없습니다.';
+    } catch (e) {
+      return;
+    }
+  }
+```
+
+- 정리하자면 users.service.ts에서는 위 코드와 같고,
+  users.resolver.ts에서는 아래 코드와 같다.
+
+```
+ async createAccount(
+    @Args('input') createAccountInput: createAccountInput,
+  ): Promise<createAccountOutput> {
+    try {
+      // error function은 error에 대해 요청(asking)한다.
+      // createAccount는 string이나 undefined를 return한다.
+      const error = await this.usersService.createAccount(createAccountInput);
+      // 에러가 있으면 ok는 false, error return한다.
+      if (error) {
+        return {
+          ok: false,
+          error,
+        };
+      }
+      // 에러가 없으면 ok는 true를 return한다.
+      return {
+        ok: true,
+      };
+    } catch (error) {
+      // 예상하지 못한 에러가 있으면 error를 return하고, ok는 false이다.
+      return {
+        error,
+        ok: false,
+      };
+    }
+  }
+```
+
+- password를 해싱(hashing), 암호화(encrypting)을 하지 않았지만, string을 return하는 것을 http://localhost:3000/graphql 에서 테스트 해본다.
+
+```
+mutation {
+	createAccount(input:{
+    email:"kim@kim12.com",
+    password: "1234567",
+    role: Client
+  }) {
+    ok
+    error
+  }
+}
+```
+
+- 1번 할 때
+
+```
+{
+  "data": {
+    "createAccount": {
+      "ok": true,
+      "error": null
+    }
+  }
+}
+```
+
+- 2번 할 때
+
+```
+{
+  "data": {
+    "createAccount": {
+      "ok": false,
+      "error": "해당 이메일을 가진 사용자가 이미 존재합니다."
+    }
+  }
+}
+```
+
+- pgAdmin user에서 자료보기를 클릭하여 id, createdAt, updatedAt, email, password, role 등을 확인할 수 있다.
+- role을 Client를 했기 때문에 0으로 보여지는 것을 확인할 수 있다.

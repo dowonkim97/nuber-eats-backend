@@ -16,5 +16,31 @@ export class UsersResolver {
   }
 
   @Mutation((returns) => createAccountOutput)
-  createAccount(@Args('input') createAccountInput: createAccountInput) {}
+  // resolver에는 createAccount function이 있다.
+  async createAccount(
+    @Args('input') createAccountInput: createAccountInput,
+  ): Promise<createAccountOutput> {
+    try {
+      // error function은 error에 대해 요청(asking)한다.
+      // createAccount는 string이나 undefined를 return한다.
+      const error = await this.usersService.createAccount(createAccountInput);
+      // 에러가 있으면 ok는 false, error return한다.
+      if (error) {
+        return {
+          ok: false,
+          error,
+        };
+      }
+      // 에러가 없으면 ok는 true를 return한다.
+      return {
+        ok: true,
+      };
+    } catch (error) {
+      // 예상하지 못한 에러가 있으면 error를 return하고, ok는 false이다.
+      return {
+        error,
+        ok: false,
+      };
+    }
+  }
 }
