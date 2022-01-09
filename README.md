@@ -2129,6 +2129,7 @@ return await this.userService.login(token);
 
 - Go는 error를 return하지만, TS는 throw error 해야 한다.
 - 만약에 에러를 throw, raise 같이 error을 강제로 일으키지 않는다면, resolver에서 어떤일을 해야 할까?
+- users.resolver.ts createAccount안에 try/catch문을 작성한다.
 
 ```
 try {
@@ -2143,7 +2144,7 @@ try {
 ```
 
 - async/await을 하고, try/catch를 한다.
-- error가 있으면 ok false, error로 반환(return)되게 error 처리를 해준다.
+- error가 있으면 ok는 false, error로 반환(return)되게 error 처리를 해준다.
 
 ```
  async createAccount(
@@ -2164,7 +2165,7 @@ try {
   };
 ```
 
-- ok true로 반환(return)되고, catch에서는 error: error, ok: false로 반환되게 error 처리를 해준다.
+- users.resolver.ts createAccount에서 ok true로 반환(return)되고, catch에서는 error: error, ok: false로 반환되게 error 처리를 해준다.
 - users.service.ts에서 createAccount를 변경한다.
 
 ```
@@ -2178,7 +2179,7 @@ try {
 - Promise<>와 string이나 undefined를 return 해준다.
 
 ```
-  async createAccount({
+   async createAccount({
     email,
     password,
     role,
@@ -2193,10 +2194,9 @@ try {
       // else면 아무것도 return 하지 않는다.
       // 인스턴스를 만들고 난 뒤 user를 동시에 저장(save)한다.
       await this.users.save(this.users.create({ email, password, role }));
+    } catch (e) {
       // 에러가 있으면 string을 return한다.
       return '계정을 생성할 수 없습니다.';
-    } catch (e) {
-      return;
     }
   }
 ```
