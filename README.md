@@ -2276,3 +2276,102 @@ mutation {
 
 - pgAdmin user에서 자료보기를 클릭하여 id, createdAt, updatedAt, email, password, role 등을 확인할 수 있다.
 - role을 Client를 했기 때문에 0으로 보여지는 것을 확인할 수 있다.
+
+# #4.6
+
+- 아래의 코드를 개선할 수 있다.
+
+```
+  if (error) {
+        return {
+          ok: false,
+          error,
+        };
+      }
+      return {
+        ok: true,
+      };
+```
+
+- users.service.ts createAccount에서 string이나 undefined 대신 배열(array)를 return한다.
+
+```
+<string | undefined>
+```
+
+- 위 코드 대신에
+
+```
+<[boolean, string?]>
+```
+
+- string은 있을 수도 있고, 없을 수도 있다.
+
+```
+return [false, '해당 이메일을 가진 사용자가 이미 존재합니다.'];
+return [false, '계정을 생성할 수 없습니다.'];
+
+```
+
+- users.service.ts에서 ok의 boolean 값으로 false, error 메세지를 return 한다.
+
+```
+return [true]
+```
+
+- 위의 코드는 배열[]을 true로 return 한다.
+
+```
+      const [ok, error] = await this.usersService.createAccount(
+        createAccountInput,
+      );
+```
+
+- users.resolver.ts에서도 배열[] ok,error로 할 수 있다.
+
+```
+      // 에러가 있으면 ok는 false, error return한다.
+      if (error) {
+        return {
+          ok: false,
+          error,
+        };
+      }
+
+```
+
+- 위의 코드를 지우고 아래의 코드만 사용할 수 있게 대체할 수 있다.
+
+```
+      return {
+        ok,
+        error
+      };
+```
+
+- if/else를 안해도 되고, 코드가 줄어들어서 보기 좋은 것 같다.
+- ok는 true/false되거나, error는 undefined/string 될 수 있다.
+- if 생략은 배열[]을 return한다는 전제에 가능하다.
+
+```
+<{ok: boolean, error: string?}>
+```
+
+- 원하면 object를 return 할 수도 있다.
+
+```
+return {ok: false, error: '해당 이메일을 가진 사용자가 이미 존재합니다.'};
+return { ok: true };
+return { ok: false, error: '계정을 생성할 수 없습니다.' };
+```
+
+```
+      const {ok, error} = await this.usersService.createAccount(
+        createAccountInput,
+      );
+```
+
+- 이러한 옵션도 있지만, 객체(object) 방식보다 배열(array) 방식으로 한다.
+- 물론 객체 방식이 친절한 코딩, 협업시 일관된 에러 처리를 할 수 있다고 하지만... 아직 불편함을 느끼지 않아서 계속 사용해보고 평가해야겠다.
+- users.service.ts UsersService는 ok, error만 처리할 것이다.
+- users.resolver.ts createAccountInput, createAccountOutput과 같이 input, output을 보낸다.
