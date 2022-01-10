@@ -2371,7 +2371,7 @@ return { ok: false, error: '계정을 생성할 수 없습니다.' };
       );
 ```
 
-- 이러한 옵션도 있지만, 객체(object) 방식보다 배열(array) 방식으로 한다.
-- 물론 객체 방식이 친절한 코딩, 협업시 일관된 에러 처리를 할 수 있다고 하지만... 아직 불편함을 느끼지 않아서 계속 사용해보고 평가해야겠다.
+- 이러한 옵션도 있지만, 배열(array) 방식보다 객체(object) 방식으로 한다.
+- 객체(object) 방식이 친절한 코딩, 협업시 일관된 에러 처리를 할 수 있다.
 - users.service.ts UsersService는 ok, error만 처리할 것이다.
 - users.resolver.ts createAccountInput, createAccountOutput과 같이 input, output을 보낸다.
