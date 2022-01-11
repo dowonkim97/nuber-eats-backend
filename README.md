@@ -2306,6 +2306,8 @@ mutation {
 ```
 
 - string은 있을 수도 있고, 없을 수도 있다.
+- string은 graphql type이다.
+- https://www.apollographql.com/docs/apollo-server/schema/schema/#scalar-types
 
 ```
 return [false, '해당 이메일을 가진 사용자가 이미 존재합니다.'];
@@ -2375,3 +2377,29 @@ return { ok: false, error: '계정을 생성할 수 없습니다.' };
 - 객체(object) 방식이 친절한 코딩, 협업시 일관된 에러 처리를 할 수 있다.
 - users.service.ts UsersService는 ok, error만 처리할 것이다.
 - users.resolver.ts createAccountInput, createAccountOutput과 같이 input, output을 보낸다.
+
+# #4.7
+
+- pgAdmin4에서처럼 데이터베이스(db)에 비밀번호를 입력하는 것은 나쁜 보안방법이다.
+- 비밀번호를 해싱(hashing)한다.
+- asdasdasd 님 정리 (hashing password)
+- https://www.youtube.com/watch?v=67UwxR3ts2E (hashing password)
+- hash function은 input 문자열에 대해 이상한 output 문자열을 출력하는 함수이고, 단방향성은 output을 토대로 input 역추정이 불가하다. input을 조금만 수정해도 output은 크게 달라진다. input에 대한 output은 언제나 동일하고, rainbow table에서 확인 가능하다. salt(짧은 임의의 텍스트)와 함께 hash 함수 실행 => rainbow table에서 확인 불가.)
+
+- password를 그대로 저장하지 않고, 단방향성(one way) function인 hash를 저장한다..
+- ex) 12345 -> hash function -> we
+- user의 password를 모른다. 보안적 위험이 있는 DB에 저장하지 않고, hash에 저장한다.
+- 단방향성 function이기 때문에 못생긴 패스워드(uglypassword)를 123 같이 만들수 없다.
+
+```
+DELETE FROM public."user"
+	WHERE ID=0;
+  DELETE FROM public."user"
+	WHERE ID=1;
+  DELETE FROM public."user"
+	WHERE ID=2;
+DELETE FROM public."user"
+	WHERE ID=3;
+```
+
+- 테이블에 있는 내용을 모두 삭제해준다.
