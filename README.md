@@ -2427,8 +2427,6 @@ export class Post {
 - 엔티티에 어떤 이름으로든 메소드를 정의하고 @AfterLoad로 표시하면 TypeORM은 엔티티가 QueryBuilder 또는 repository/manager 메소드를 사용하여 Post를 로드될 때마다 이를 호출한다.
 - https://github.com/typeorm/typeorm/blob/master/docs/listeners-and-subscribers.md#what-is-an-entity-listener (typeorm listener)
 
--
-
 ```
   @AfterLoad
   @BeforeInsert
@@ -2471,6 +2469,12 @@ export class Post {
 - npm i @types/bcrypt --dev-only (vscode 터미널)
 
 ```
+import * as bcrypt from 'bcrypt';
+```
+
+- users.entity.ts에서 bcrypt를 import 해준다.
+
+```
  // 인스턴스를 만들고 난 뒤 user를 동시에 저장(save)한다.
       await this.users.save(this.users.create({ email, password, role }));
 ```
@@ -2485,13 +2489,12 @@ export class Post {
   }
 ```
 
-- @BeforeInsert를 DB에 저장하기 전에 인스턴스(instance)의 users.service.ts에서 create안의 password를 받아서 가진다.
+- @BeforeInsert를 DB에 저장하기 전에 인스턴스(instance)의 users.service.ts에서 create안의 password를 받아서 가진다. users.entity.ts에서는 this.password이다.
 - entity만 생성하기만 하고, DB에 저장하지 않는다.
 - entity를 저장하기 전에는 users.entity.ts의 bcrypt로 password를 못생기게 만든 다음에 users.service.ts에서 저장한다.
-- users.entity.ts에서는 this.password이다.
 
 - https://gofnrk.tistory.com/112 (saltOrRounds 검색)
-- saltOrRounds는 salt를 몇 번 돌릴거냐는 뜻이다. 보통 기본 10으로 설정한다. saltOrRounds가 높을 수록 암호화가 강력해지지만 속도는 현저히 느려진다.
+- saltOrRounds는 salt를 몇 번 돌리는 지의 의미이다. 보통 기본 10으로 설정한다. saltOrRounds가 높을수록 암호화가 강력해지지만 속도는 현저히 느려진다.
 
 ```
  @BeforeInsert()
