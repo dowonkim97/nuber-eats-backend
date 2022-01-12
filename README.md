@@ -14,6 +14,9 @@
 - 다른 하나의 nest 폴더에서는 private로 진행한다.
 - 다른 하나의 nest는 직접 배운 코드를 다르게 짜본다.
 
+- 느낀점
+- 실력이 늘기 위해서는 관련 문서를 많이 읽고 적용 해봐야겠다.
+
 # 강의에서 배운 것들만 기록
 
 # #0.6
@@ -2403,3 +2406,132 @@ DELETE FROM public."user"
 ```
 
 - 테이블에 있는 내용을 모두 삭제해준다.
+
+- listeners는 entity에 무슨일이 있을 때 실행된다.
+
+- 모든 엔터티에는 특정 엔터티 이벤트를 수신하는 사용자 지정 논리가 있는 메서드가 있을 수 있다.
+- https://github.com/typeorm/typeorm/blob/master/docs/listeners-and-subscribers.md#what-is-an-entity-listener (typeorm listener)
+
+```
+@Entity()
+export class Post {
+
+    @AfterLoad()
+    updateCounters() {
+        if (this.likesCount === undefined)
+            this.likesCount = 0;
+    }
+}
+```
+
+- 엔티티에 어떤 이름으로든 메소드를 정의하고 @AfterLoad로 표시하면 TypeORM은 엔티티가 QueryBuilder 또는 repository/manager 메소드를 사용하여 Post를 로드될 때마다 이를 호출한다.
+- https://github.com/typeorm/typeorm/blob/master/docs/listeners-and-subscribers.md#what-is-an-entity-listener (typeorm listener)
+
+-
+
+```
+  @AfterLoad
+  @BeforeInsert
+  @AfterInsert
+  @BeforeUpdate
+  @AfterUpdate
+  @BeforeRemove
+  @AfterRemove
+```
+
+- 위에 데코레이터들은 특정 이벤트(event)를 기반의 function을 불러주는 decorator(@)들이다.
+- Entity안에 어떤 이름이든 메소드(method)를 정의하고, 표시(mark)할 수 있는 BeforeInsert를 적용해본다.
+
+```
+@Entity()
+export class Post {
+
+    @BeforeInsert()
+    updateDates() { // 원하는 것을 넣으면 된다.
+        this.createdDate = new Date();
+    }
+}
+```
+
+- 엔티티에 어떤 이름으로든 메소드를 정의하고 @BeforeInsert로 표시할 수 있다. 그러면 Repository/manager를 사용하여 엔티티가 삽입되기 전에 TypeORM이 이를 호출한다.
+
+```
+  @BeforeInsert()
+  async hashPassword(): Promise<void> {}
+```
+
+- users.entity.ts에서 @BeforeInsert를 만든다.
+- hashPassword라는 원하는 이름을 넣어준다.
+- async, Promise<>안에 공백으로 원하는 이름을 넣어준다.
+
+- password를 해싱(hashing)하기 위해서는 hash를 할 수 있고(can), 확인(check)하는 데 사용하고, password를 확인(check) 할 수 있고, salt를 만들 수 있는 Bcrypt를 사용한다.
+- https://www.npmjs.com/package/bcrypt (Bcrypt 검색)
+- npm i bcrypt (vscode 터미널)
+- https://www.npmjs.com/package/@types/bcrypt (types Bcrypt 검색)
+- npm i @types/bcrypt --dev-only (vscode 터미널)
+
+```
+ // 인스턴스를 만들고 난 뒤 user를 동시에 저장(save)한다.
+      await this.users.save(this.users.create({ email, password, role }));
+```
+
+- users.service.ts에서 save하기 전에 create 했는데 이때 이미 password 인스턴스(instance)를 가지고 있었다.
+
+```
+  @BeforeInsert()
+  async hashPassword(): Promise<void> {
+    // 패스워드를 못생기게 바꾼다.
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+```
+
+- @BeforeInsert를 DB에 저장하기 전에 인스턴스(instance)의 users.service.ts에서 create안의 password를 받아서 가진다.
+- entity만 생성하기만 하고, DB에 저장하지 않는다.
+- entity를 저장하기 전에는 users.entity.ts의 bcrypt로 password를 못생기게 만든 다음에 users.service.ts에서 저장한다.
+- users.entity.ts에서는 this.password이다.
+
+- https://gofnrk.tistory.com/112 (saltOrRounds 검색)
+- saltOrRounds는 salt를 몇 번 돌릴거냐는 뜻이다. 보통 기본 10으로 설정한다. saltOrRounds가 높을 수록 암호화가 강력해지지만 속도는 현저히 느려진다.
+
+```
+ @BeforeInsert()
+  async hashPassword(): Promise<void> {
+    try {
+      this.password = await bcrypt.hash(this.password, 10);
+      // 패스워드를 못생기게 바꾼다.
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
+  }
+```
+
+- try/catch를 써준다.
+- InternalServerErrorException을 throw하면 users.service.ts this.users.save에서 catch한다.
+- 계정을 생성할 수 없습니다.를 return한다.
+
+```
+mutation {
+	createAccount(input:{
+    email:"kim@kim.com",
+    password: "12345",
+    role: Client
+  }) {
+    ok
+    error
+  }
+}
+```
+
+```
+{
+  "data": {
+    "createAccount": {
+      "ok": true,
+      "error": null
+    }
+  }
+}
+```
+
+- pgAdmin4에서 $2b$10$MCE~~~blablabla 못 생겨 진 것을 확인할 수 있다.
