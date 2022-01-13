@@ -2542,7 +2542,7 @@ mutation {
 - users.resolver.ts에다가 mutation을 만들어준다.
 - users/dtos안에 login.dto.ts파일을 생성한다.
 - output부터 만드는 것을 시작한다.
-- common/dtos폴더와 output.dto.ts파일을 생성한다.
+- common폴더에 dtos폴더와 output.dto.ts파일을 생성한다.
 
 ```
 @ObjectType()
@@ -2552,7 +2552,6 @@ export class createAccountOutput {
   @Field((type) => Boolean)
   ok: boolean;
 }
-
 ```
 
 - create-account.dto.ts에서 @ObjectType() CreateAccountOutput 위의 코드를 반복하고 있다.
@@ -2586,6 +2585,10 @@ export class LoginOutput extends MutationOutput {}
 ```
 
 - class를 LoginOutput으로 만들어준다.
+
+```
+  @Mutation((returns) => LoginOutput)
+```
 
 - users.resolver.ts에도 @Mutation을 LoginOutput을 리턴(returns) 한다.
 
