@@ -293,13 +293,10 @@ mutation {
 
 - restaurants.resolver.ts input을 Dto로 바꾼다.
 
-- @Args('name') name: string 이런식으로 많은 resolver를 작성해줘야
-  해서 번거로운 방법이었고, InputType은 graphql에서 name: "" 같은
-  object를 많이 전달해줘야 해서 번거로운 방법이었기 때문에
-  ArgsType으로 변경해주면 이러한 수고로움을 겪지 않아도 된다.
-  class CreateRestaurantDto에 모든 것을 관리할 수 있는
+- @Args('name') name: string 이런식으로 많은 resolver를 작성해줘야 해서 번거로운 방법이었고, InputType은 graphql에서 name: "" 같은 object를 많이 전달해줘야 해서 번거로운 방법이었기 때문에 ArgsType으로 변경해주면 이러한 수고로움을 겪지 않아도 된다.
+- class CreateRestaurantDto에 모든 것을 관리할 수 있는
   ArgsType이 제일 좋은 방법인 것 같다.
-  그리고 이 방식을 사용하면 class의 유효성검사도 할 수 있다.
+- 그리고 이 방식을 사용하면 class의 유효성검사도 할 수 있다.
 
 # #1.5
 
@@ -2538,3 +2535,119 @@ mutation {
 ```
 
 - pgAdmin4에서 $2b$10$MCE~~~blablabla 못 생겨 진 것을 확인할 수 있다.
+
+# #4.8
+
+- login resolver, service method를 만든다.
+- users.resolver.ts에다가 mutation을 만들어준다.
+- users/dtos안에 login.dto.ts파일을 생성한다.
+- output부터 만드는 것을 시작한다.
+- common/dtos폴더와 output.dto.ts파일을 생성한다.
+
+```
+@ObjectType()
+export class createAccountOutput {
+  @Field((type) => String, { nullable: true })
+  error?: string;
+  @Field((type) => Boolean)
+  ok: boolean;
+}
+
+```
+
+- create-account.dto.ts에서 @ObjectType() CreateAccountOutput 위의 코드를 반복하고 있다.
+- 위 코드를 복사해서 output.dto.ts에 붙여넣기 한다.
+- output.dto.ts의 class를 MutationOutput으로 변경한다.
+- create-account.dto.ts에서 있었던 위의 코드는 삭제해버리고 아래의 코드를 작성한다.
+
+```
+export class createAccountOutput extends MutationOutput {}
+```
+
+- common/dtos output.dto.ts에서 MutationOutput을 각자 다른 이름을 붙이기 위해 extends 한다.
+- users.resolver.ts에는 CreateAccoutOutput이란 이름을 쓰고 싶기 때문이다.
+
+- GraphQLError [Object]: Type createAccountOutput must define one or more fields. 에러가 발생하기 때문에 @ObjectType()를 common/dtos output.dto.ts, user/dtos create-account.dto.ts 둘 다 추가해준다.
+
+```
+type createAccountOutput {
+error: String
+ok: Boolean!
+}
+```
+
+- output에 String, Boolean!이 작동하는 것을 확인할 수 있다.
+
+- login.dto.ts에도 같은 것을 만들어준다.
+
+```
+@ObjectType()
+export class LoginOutput extends MutationOutput {}
+```
+
+- class를 LoginOutput으로 만들어준다.
+
+- users.resolver.ts에도 @Mutation을 LoginOutput을 리턴(returns) 한다.
+
+```
+  @Field((type) => String)
+  token: string;
+```
+
+- login.dto.ts에서 ok, error과 별개로 mutation인 login이 token을 리턴(return)한다. 왜? token을? 암호화((encrypting)랑 관련 있나?
+
+```
+  async login(@Args('input') loginInput: LoginInput) {}
+```
+
+- input타입으로 해주고 users.resolver.ts에서 createAccountInput 한 거랑 같이 loginInput을 해주고, 나중에 LoginInput을 넣는다.
+
+```
+@InputType()
+export class LoginInput extends PickType(User, ["email", "password"]) {}
+
+```
+
+- login.dto.ts에서는 loginInput class를 만들고, PickType을 사용해서 username, password만 요청한다.
+
+```
+  @IsEmail()
+  @IsEnum(UserRole)
+```
+
+- users.entity.ts에서 email과 enum에 클래스 유효성검사를 해준다. enum에는 UserRole이란 entity를 넣는다.
+
+```
+login(
+input: LoginInput!: LoginOutput! //MUTATION
+input: LoginInput! // ARGUMENTS
+// TYPE
+email: String!
+password: String!
+```
+
+- graphQL http://localhost:3000/graphql에서 확인할 수 있다.
+
+```
+mutation {
+	login(input:{
+    email:"kim@kim.com",
+    password: "12345",
+  }) {
+    ok
+    error
+  }
+}
+```
+
+```
+      "message": "Cannot return null for non-nullable field Mutation.login.",
+```
+
+- return을 아직 해주지 않아서 나오지 않는다.
+
+```
+  async login(@Args('input') loginInput: LoginInput): Promise<LoginOutput> {}
+```
+
+- users.resolver.ts에서 Promise<> 안에 LoginOutput를 써주었다.
