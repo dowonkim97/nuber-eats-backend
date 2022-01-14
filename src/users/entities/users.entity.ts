@@ -49,4 +49,15 @@ export class User extends CoreEntity {
       throw new InternalServerErrorException();
     }
   }
+  // checkPassword는 user가 우리에게 준 password를 받는다.
+  async checkPassword(aPassword: string): Promise<boolean> {
+    try {
+      // compare 같은지 안 같은지 비교
+      const ok = await bcrypt.compare(aPassword, this.password);
+      return ok;
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException();
+    }
+  }
 }

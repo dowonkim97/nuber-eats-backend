@@ -24,9 +24,7 @@ export class UsersResolver {
     try {
       // error function은 error에 대해 요청(asking)한다.
       // createAccount는 string이나 undefined를 return한다.
-      const { ok, error } = await this.usersService.createAccount(
-        createAccountInput,
-      );
+      return await this.usersService.createAccount(createAccountInput);
       `
       // 에러가 있으면 ok는 false, error return한다.
       if (error) {
@@ -40,10 +38,6 @@ export class UsersResolver {
         ok: true,
       };
       `;
-      return {
-        ok,
-        error,
-      };
     } catch (error) {
       // 예상하지 못한 에러가 있으면 error를 return하고, ok는 false이다.
       return {
@@ -54,5 +48,14 @@ export class UsersResolver {
   }
 
   @Mutation((returns) => LoginOutput)
-  async login(@Args('input') loginInput: LoginInput): Promise<LoginOutput> {}
+  async login(@Args('input') loginInput: LoginInput): Promise<LoginOutput> {
+    try {
+      return await this.usersService.login(loginInput);
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
+  }
 }

@@ -2654,3 +2654,188 @@ mutation {
 ```
 
 - users.resolver.ts에서 Promise<> 안에 LoginOutput를 써주었다.
+
+# #4.9
+
+- users.service.ts에서 login function을 만든다.
+
+```
+ async login({
+    email,
+    password,
+  }: LoginInput): Promise<{ ok: boolean; error?: string; token?: string }> {}
+```
+
+- LoginInput에서 email, password를 받고, promise에서 createAccountInput과 같이 ok, error를 넣어주고, 추가로 token을 return한다.
+
+```
+    try {
+      // email을 가진 user를 찾는다(find).
+      const user = await this.users.findOne({ email });
+      // user가 존재하지 않는다면
+      if (!user) {
+        return {
+          ok: false,
+          error: '사용자를 찾을 수 없습니다.',
+        };
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
+```
+
+- 첫 번째로 email을 가진 user를 찾는다(find).
+- try/catch를 사용한다.
+
+  // password가 맞는지 확인(check)한다.
+  // JWT를 만들고 user에게 준다(give).
+
+- 12345가 $2b$10$MCE~~~와 같은지 어떻게 알 수 있을까?
+  user가 주려는 password를 hash해서 12345를 못생기게(ex $2b$10$MCE~~~)로 만든 다음 이 못생긴 password가 DB의 password와 맞는지 확인한다.
+- 만약 같다면 user가 password를 제대로 준 것이다.
+- 이 방식으로 하면 실제 password를 알지 않고도 사용자가 올바르게 입력했는 지 알 수 있다.
+- 유저 password 줌 => hash => DB와 비교
+
+- https://joshua1988.github.io/web-development/javascript/javascript-asynchronous-operation/ (자바스크립트 비동기 처리와 콜백 함수)
+- https://joshua1988.github.io/web-development/javascript/promise-for-beginners/
+  (자바스크립트 Promise 쉽게 이해하기)
+- https://joshua1988.github.io/web-development/javascript/js-async-await/
+  (자바스크립트 async와 await)
+- 위에 3개의 글은 재밌고, 이해 잘 되고, 잘 썼으니 까먹으면 다시 제대로 정독한다. 대충 보면 안 본거만도 못하다.
+
+```
+  async checkPassword(aPassword: string): Promise<boolean> {
+    try {
+      // compare 같은지 안 같은지 비교
+      const ok = await bcrypt.compare(aPassword, this.password);
+      return ok;
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException();
+    }
+```
+
+- users.entity.ts에서 async checkPassword라고 하고 aPassword를 받는다. Promise는 boolean으로 return한다.
+- try/catch 사용한다.
+- aPassword랑 this.password랑 비교한다.
+
+```
+     const passwordCorrect = await user.checkPassword(password);
+      if (!passwordCorrect) {
+        return {
+          ok: false,
+          error: '잘못된 비밀번호입니다.',
+        };
+      }
+```
+
+- users.service.ts에서 try {} 안에 작성해준다. users.entity.ts에 checkPassword 메소드를 가지고 있다. user.checkPassword에서 user은 entity의 user이다.
+- (password)는 값이 string이다.
+- passwordCorrect가 만약 안될 경우 리턴해준다.
+
+```
+      const user = await this.users.findOne({ email });
+```
+
+- 두 코드(const user, user.checkPassword)의 user는 서로 다르다. 왜 다를까?... 둘 다 user:User로 되는데 둘 다 같은 것 아닐까? this.users.findOne 여기서 users랑 user.checkPassword 여기서 user랑 다른게 아닐까? 생각해본다.
+
+```
+ try {
+         const { ok, error, token } = await this.usersService.login(loginInput);
+      return { ok, error, token };
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
+```
+
+- #4.8에서 users.resolver.ts Mutation login 방치했던 것 안에 위 코드와 같이 try/catch를 작성한다.
+
+```
+  @Field((type) => String, { nullable: true })
+  token?: string;
+```
+
+- login.dto.ts에서 @objectType안에 token은 ?(optional)token?이다.
+- nullable 즉 null도 가질 수 있는 타입이다. nullable true 해준다.
+
+```
+  if (!passwordCorrect) {
+        return {
+          ok: false,
+          error: '잘못된 비밀번호입니다.',
+        };
+      }
+      return {
+        ok: true,
+        token: 'lalalala',
+      };
+```
+
+- 위 코드와 같이 잘못된 패스워드가 아니면 반환하게끔 확인한다.
+
+```
+  return await this.usersService.createAccount(
+  return await this.usersService.login(loginInput);
+```
+
+- users.resolver.ts에서 위 코드와 같이 수정해준다.
+
+```
+mutation {
+	login(input:{
+    email:"kim@kim.com",
+    password: "12345",
+  }) {
+    ok
+    error
+    token
+  }
+}
+```
+
+```
+{
+  "data": {
+    "login": {
+      "ok": true,
+      "error": null,
+      "token": "lalalala"
+    }
+  }
+}
+```
+
+```
+mutation {
+	login(input:{
+    email:"kim@kim.com",
+    password: "dfsfsdfsff",
+  }) {
+    ok
+    error
+    token
+  }
+}
+```
+
+```
+{
+  "data": {
+    "login": {
+      "ok": false,
+      "error": "잘못된 비밀번호입니다.",
+      "token": null
+    }
+  }
+}
+```
+
+- http://localhost:3000/graphql에서 lalalala의 토큰 테스트 결과를 확인할 수 있다.
+
+- 다음에는 토큰 발생(generate)시키기를 테스트 해본다.
