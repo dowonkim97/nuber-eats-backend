@@ -2851,6 +2851,7 @@ mutation {
 # #5.0
 
 - token을 만드는 방법은 첫번째 방법은 수작업, 두번째 방법은 nestjs/passports를 적용시킨 후 passport-jwt, nestjs/jwt를 활용하는 방법이 있다. 스스로 하는 방식을 배우기 위해 첫번째 방법으로 token을 만든다.
+
 - https://docs.nestjs.com/security/authentication#implementing-passport-strategies (nestjs 인증(Authentication) 검색)
 
 ```
@@ -2871,7 +2872,6 @@ GraphQLModule.forRoot
 - npm i jsonwebtoken (vscode 터미널)
 - https://www.npmjs.com/package/@types/jsonwebtoken (@types/jsonwebtoken 검색)
 - npm i @types/jsonwebtoken --only-dev (vscode 터미널)
-
 - https://github.com/auth0/node-jsonwebtoken
   (github jsonwebtoken)
 
@@ -2890,15 +2890,21 @@ var token = jwt.sign({ foo: 'bar' }, privateKey, { algorithm: 'RS256'});
 - privateKey는 app.module.ts process.env에서 가져온다.
 
 ```
+var jwt = require('jsonwebtoken');
+var token = jwt.sign({ foo: 'bar' }, 'shhhhh');
+```
+
+- { algorithm: 'RS256' } 알고리즘을 안 써줘도 되는 기본(default)이다.
+
+```
       validationSchema: Joi.object({
         SECRET_KEY: Joi.string().required(),
       )}
 ```
 
-- { algorithm: 'RS256' } 알고리즘을 안 써줘도 되는 기본(default)이다.
 - https://huniroom.tistory.com/entry/7NestJS-Configuration-%ED%99%98%EA%B2%BD%EB%B3%80%EC%88%98-%EC%84%A4%EC%A0%95-nestjsconfig-cross-env-joi (validationSchema 검색)
 - validationSchema는 package.json에서 설정한 NODE_ENV에 설정한 환경변수가 유효한지 검사한다.
-- validationSchema 안에 token을 지정하기 위해 사용하는 privateKey인 SECRET_KEY를 넣어준다.
+- app.module.ts validationSchema 안에 token을 지정하기 위해 사용하는 privateKey인 SECRET_KEY를 넣어준다.
 - privateKey로 token을 지정하는 이유는 개발자가 사용자 token을 수정했는지 확인할 수 있게 하기 위해서이다.
 - 사용자도 token의 정보를 볼 수 있지만, 사용자가 정보 수정하는 경우 사용자가 수정한 정보를 개발자가 알 수 있다.
 - token을 사용자(user)로 지정하면 사용자가 자신의 token 안에 무엇이 들어있는지 암호를 해독할 수 있다. 그렇기 때문에 token은 ID 정도의 정보를 사용자가 누군지 알 수 있게 보여주는 게 좋고, 개인정보를 넣으면 좋지 않다.
@@ -2921,29 +2927,35 @@ import * as jwt from 'jsonwebtoken';
 
 ```
   imports: [TypeOrmModule.forFeature([User]), ConfigService],
-
 ```
 
 - users.module.ts로 가서 imports에 ConfigService를 추가해주면, users.service에서 get을 사용하여 값을 얻을 수 있다.
 
 ```
+constructor(private readonly config: ConfigService,) {
+```
+
+- users.module.ts configService가 users.service.ts constructor() 안에 private readonly config: ConfigService로 요청받는다.
+
+```
  error TS2554: Expected 2-4 arguments, but got 1, 63 const token = jwt.sign({ id: user.id });secretOrPrivateKey: Secret,
 ```
 
-- 에러가 발생하기 때문에 위의 코드를 아래와 같이 바꿔준다.
+- process.env.SECRET_KEY를 지워주면 에러가 발생하기 때문에 위의 코드를 아래와 같이 바꿔준다.
 
 ```
   const token = jwt.sign({ id: user.id }, this.config.get('SECRET_KEY'));
 ```
 
 - users.module.ts에서 imports configService를 users.service.ts에서 활용할 수 있게 되고, config.get('SECRET_KEY')이 작동하게 된다.
+- https://darrengwon.tistory.com/965 (this.config.get 검색) 다른 파일에서 환경 변수 로드하는 방식이다.
 
 - app.module.ts install module => users.module.ts ask configService => nestjs already know => app.module.ts Configmodule give => users.module.ts configService => ask constructor(private readonly config: ConfigService)
 
 ```
-constructor() {
+constructor(private readonly config: ConfigService,) {
     console.log(this.config.get('SECRET_KEY'));
   }
 ```
 
-- constructor() 안에 console.log를 찍으면 키 값이 나오는 것을 확인할 수 있다.
+- constructor() {} 안에 console.log를 찍으면 키 값이 나오는 것을 확인할 수 있다.
