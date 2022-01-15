@@ -4,12 +4,17 @@ import { Repository } from 'typeorm';
 import { createAccountInput } from './dtos/create-account.dto';
 import { LoginInput } from './dtos/login.dto';
 import { User } from './entities/users.entity';
+import * as jwt from 'jsonwebtoken';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
-  ) {}
+    private readonly config: ConfigService,
+  ) {
+    console.log(this.config.get('SECRET_KEY'));
+  }
 
   async createAccount({
     email,
@@ -50,6 +55,7 @@ export class UsersService {
           error: '사용자를 찾을 수 없습니다.',
         };
       }
+      // password가 맞는지 확인(check)한다.
       const passwordCorrect = await user.checkPassword(password);
       if (!passwordCorrect) {
         return {
@@ -57,6 +63,9 @@ export class UsersService {
           error: '잘못된 비밀번호입니다.',
         };
       }
+      // 누구든 token을 못보게 user ID만 넣어준다.
+      // process.env.SECRET_KEY로 해도 괜찮지만, nethjs 방식이 아니다.
+      const token = jwt.sign({ id: user.id }, this.config.get('SECRET_KEY'));
       return {
         ok: true,
         token: 'lalalala',
@@ -67,7 +76,6 @@ export class UsersService {
         error,
       };
     }
-    // password가 맞는지 확인(check)한다.
     // JWT를 만들고 user에게 준다(give).
   }
 }

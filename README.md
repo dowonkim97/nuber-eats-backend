@@ -2847,3 +2847,103 @@ mutation {
 - http://localhost:3000/graphql에서 lalalala의 토큰 테스트 결과를 확인할 수 있다.
 
 - 다음에는 토큰 발생(generate)시키기를 테스트 해본다.
+
+# #5.0
+
+- token을 만드는 방법은 첫번째 방법은 수작업, 두번째 방법은 nestjs/passports를 적용시킨 후 passport-jwt, nestjs/jwt를 활용하는 방법이 있다. 스스로 하는 방식을 배우기 위해 첫번째 방법으로 token을 만든다.
+- https://docs.nestjs.com/security/authentication#implementing-passport-strategies (nestjs 인증(Authentication) 검색)
+
+```
+ConfigModule.forRoot
+TypeOrmModule.forRoot
+GraphQLModule.forRoot
+```
+
+- app.module.ts에서 위의 모듈처럼 모듈을 만드는 것을 아직 배우지 않았다.
+- jwt를 직접 만들어서 인증(authentication)을 구현한다.
+- forRoot를 직접 만들면 email 보내고, email 모듈 forRoot를 만들 때 매우 유용하다.
+- users.service.ts에서 token generation을 작동하게 만들어준 뒤에 모듈로 적용시켜본다.
+
+# #5.1
+
+- https://www.npmjs.com/package/jsonwebtoken
+  (jsonwebtoken 검색)
+- npm i jsonwebtoken (vscode 터미널)
+- https://www.npmjs.com/package/@types/jsonwebtoken (@types/jsonwebtoken 검색)
+- npm i @types/jsonwebtoken --only-dev (vscode 터미널)
+
+- https://github.com/auth0/node-jsonwebtoken
+  (github jsonwebtoken)
+
+```
+// 동기(Synchronous) Sign with RSA SHA256
+// sign with RSA SHA256
+var privateKey = fs.readFileSync('private.key');
+var token = jwt.sign({ foo: 'bar' }, privateKey, { algorithm: 'RS256'});
+```
+
+- https://www.hanumoka.net/2018/10/06/javascript-20181006-javascript-callback/
+  (Synchronous 검색)
+
+- jwt.sign({foo: "bar"처럼 원하는 데이터를 토큰에 넣음})
+  , privateKey와 algorithm을 적어준다.
+- privateKey는 app.module.ts process.env에서 가져온다.
+
+```
+      validationSchema: Joi.object({
+        SECRET_KEY: Joi.string().required(),
+      )}
+```
+
+- { algorithm: 'RS256' } 알고리즘을 안 써줘도 되는 기본(default)이다.
+- https://huniroom.tistory.com/entry/7NestJS-Configuration-%ED%99%98%EA%B2%BD%EB%B3%80%EC%88%98-%EC%84%A4%EC%A0%95-nestjsconfig-cross-env-joi (validationSchema 검색)
+- validationSchema는 package.json에서 설정한 NODE_ENV에 설정한 환경변수가 유효한지 검사한다.
+- validationSchema 안에 token을 지정하기 위해 사용하는 privateKey인 SECRET_KEY를 넣어준다.
+- privateKey로 token을 지정하는 이유는 개발자가 사용자 token을 수정했는지 확인할 수 있게 하기 위해서이다.
+- 사용자도 token의 정보를 볼 수 있지만, 사용자가 정보 수정하는 경우 사용자가 수정한 정보를 개발자가 알 수 있다.
+- token을 사용자(user)로 지정하면 사용자가 자신의 token 안에 무엇이 들어있는지 암호를 해독할 수 있다. 그렇기 때문에 token은 ID 정도의 정보를 사용자가 누군지 알 수 있게 보여주는 게 좋고, 개인정보를 넣으면 좋지 않다.
+- https://randomkeygen.com/ 256비트 CodeIgniter 암호화 키를 복사 붙여넣기 해서 .env.dev에서 SECRET_KEY=ur~~~~~를 넣어준다.
+- 사용자에게 json web token이라는 약간의 json을 주고, 개발자가 사용자에게 주는 json을 지정해야 한다. 그렇게 해야 개발자가 준(give) json인지 가짜(fake) token인지 구별할 수 있다.
+- token이 작동하게(working) 만들어주고, 그 다음에 token module을 만든다.
+- token안에 정보를 넣을 것인지 정하고, privateKey를 적어준다.
+
+```
+import * as jwt from 'jsonwebtoken';
+      const token = jwt.sign({ id: user.id }, process.env.SECRET_KEY);
+ return {
+        ok: true,
+        token: 'lalalala',
+      };
+```
+
+- users.service.ts에서 sign(payload: string | object | Buffer, secretOrPrivateKey: jwt.Secret, options?: jwt.SignOptions) sign안에 payload에서 누구든 token을 못보게 user id만 넣어준다.
+- process.env.SECRET_KEY로 해도 괜찮지만, nethjs 방식이 아니기 때문에 app.module.ts ConfigModule을 활용한다.
+
+```
+  imports: [TypeOrmModule.forFeature([User]), ConfigService],
+
+```
+
+- users.module.ts로 가서 imports에 ConfigService를 추가해주면, users.service에서 get을 사용하여 값을 얻을 수 있다.
+
+```
+ error TS2554: Expected 2-4 arguments, but got 1, 63 const token = jwt.sign({ id: user.id });secretOrPrivateKey: Secret,
+```
+
+- 에러가 발생하기 때문에 위의 코드를 아래와 같이 바꿔준다.
+
+```
+  const token = jwt.sign({ id: user.id }, this.config.get('SECRET_KEY'));
+```
+
+- users.module.ts에서 imports configService를 users.service.ts에서 활용할 수 있게 되고, config.get('SECRET_KEY')이 작동하게 된다.
+
+- app.module.ts install module => users.module.ts ask configService => nestjs already know => app.module.ts Configmodule give => users.module.ts configService => ask constructor(private readonly config: ConfigService)
+
+```
+constructor() {
+    console.log(this.config.get('SECRET_KEY'));
+  }
+```
+
+- constructor() 안에 console.log를 찍으면 키 값이 나오는 것을 확인할 수 있다.
