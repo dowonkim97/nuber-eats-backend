@@ -2959,3 +2959,100 @@ constructor(private readonly config: ConfigService,) {
 ```
 
 - constructor() {} 안에 console.log를 찍으면 키 값이 나오는 것을 확인할 수 있다.
+
+# #5.2
+
+- 원하는 class만 적어주면 nestjs가 정보를 가져다주는 dependency injection 때문에 configService를 적용할 수 있었다.
+
+- app.module.ts에서 configModule을 만들고, 여러 옵션을 설정해줬다. 즉 module이 정보가 있고, 어딘가 존재한다.
+
+```
+import { ConfigService } from '@nestjs/config';
+```
+
+- users.module.ts에서 ConfigService을 요청하는 것만으로 위의 코드와 같이 원하는 것을 불러올 수 있다.
+
+- nestjs는 이전에 설정해놓은 ConfigService를 제공해주고 있었다. 그래서 class 이름만 적어줘도 Configmodule이라고 알 수 있다.
+
+- forRoot를 구현해본다.
+
+```
+    const token = jwt.sign({ id: user.id }, this.config.get('SECRET_KEY'));
+      return {
+        ok: true,
+        token,
+      };
+```
+
+- users.service.ts에서 먼저 token을 체크한다.
+
+```
+mutation {
+	login(input:{
+    email:"kim@kim.com",
+    password: "12345",
+  }) {
+    ok
+    error
+    token
+  }
+}
+```
+
+```
+{
+  "data": {
+    "login": {
+      "ok": true,
+      "error": null,
+      "token": "eyJhbGciOi~~~blablabla"
+    }
+  }
+}
+```
+
+- 위와 같이 정상적으로 token이 출력되는 것을 확인할 수 있다.
+
+```
+{
+  "id": 0,
+  "iat": 164~~~blabla
+}
+```
+
+- jsonwebtoken의 내부는 누구나 쉽게 볼 수 있고, 비밀유지가 목적이 아니다.
+- https://jwt.io/에서 누구든지 token 정보를 알아낼 수 있기 때문에 중요한 정보를 넣기에는 부적절하다.
+
+```
+   const token = jwt.sign(
+        { id: user.id, password: "12345" },
+        this.config.get('SECRET_KEY'),
+      );
+```
+
+```
+{
+  "id": 0,
+  "password": "12345",
+  "iat": 1642333847
+}
+```
+
+- https://jwt.io/에서 Invalid Signature와 함께 password가 모두 보인다.
+- Invalid Signature는 token을 수정했을 때 확인이 되었지만, 백엔드로 다시 token을 가져오면, token의 정보가 수정되었기 때문에 token이 유효하지 않게 된다.
+- jsonwebtoken을 이용하여 개발자가 유효한 인증을 할 수 있게 해줘야 한다. token이 개발자 것인지, 아무도 수정하지 않았는지가 중요하다.
+- 내부 token의 정보보다 token의 정보가 진짜인지 가짜인지의 여부가 중요하다.
+- token 모듈을 만들어본다.
+- nest g mo jwt (vscode 터미널)
+- app.module.ts에서 module은 static module, dynamic module이 있다.
+- static module은 예를 들어 UserModule인데, UserModule은 어떤 설정(config)도 되어 있지 않다.
+- dynamic module은 forRoot에 마우스를 올려보면 나온다. 설정(config)이 적용되어 있다.
+- jwt가 설정(config)를 받아드릴 수 있게 바꾼다.
+
+```
+      const token = this.jwt.sign()
+```
+
+- 위의 코드처럼 jwt가 ConfigService를 가지고 있는 것처럼 바꾼다.
+- dynamic module(forRoot)을 만들고, 여러가지 옵션 설정(config)을 적용시켜 준 뒤, 개발자가 설정한 옵션이 존재하는 상태의 static module을 return 값으로 내보낸다. 그러면 결과적으로 dynamic module이 static module이 된다.
+- static module은 설정 해줘야 해서 중간 과정이라고 표현할 수 있다.
