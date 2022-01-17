@@ -3089,6 +3089,7 @@ export class JwtModule {
 - static 함수와 forRoot라고 이름 짓고, forRoot함수는 DynamicModule을 return 한다.
 - DynamicModule은 또 다른 module을 return해주는 module이다.
 - return {} 안을 보면 'module' 속성이 '{}' 형식에 없지만 'DynamicModule' 형식에서 필수라고 뜬다. 안에 module: JwtModule을 입력해준다.
+
 - users.module.ts에는 ConfigService가 있는데, users.service.ts에서 사용한다. 이것과 같이 JwtService도 만들어준다. module service export 해준다.
 - nest g s jwt (vscode 터미널)
 
@@ -3107,7 +3108,7 @@ export class JwtModule {
 }
 ```
 
-- providers: [JwtService], jwt.service.spec.ts 파일을 삭제해준다.
+- jwt.module.ts에서 providers: [JwtService], jwt.service.spec.ts 파일을 삭제해준다.
   return {} 안에 exports: [JwtService], providers: [JwtService] 추가해준다.
 - forRoot()는 DynamicModule을 반환(return)한다.
 - JwtService를 exports해서 users.module.ts에서도 사용할 수 있게 되었다.
@@ -3130,7 +3131,7 @@ export class JwtService {}
 - app.module.ts에서 JwtModule에 forRoot()를 추가해준다.
 
 ```
-  imports: [TypeOrmModule.forFeature([User]), ConfigService, JwtService],
+  imports: [TypeOrmModule.forFeature([User]), ConfigService, JwtService]
 ```
 
 - users.module.ts에 JwtService를 추가해준다.
@@ -3170,6 +3171,17 @@ export class JwtModule {
 
 - 그러므로 jwt.module.ts JwtModule에도 같이 @Global을 적용한다. 그러면 수동으로 매번 가져오지 않아도 된다.
 - @Global - 모듈을 전역 범위로 만드는 데코레이터입니다. 모듈로 가져오면 전역 범위 모듈이 모든 모듈에서 표시됩니다. 이후 글로벌 모듈에서 내보낸 서비스를 주입하려는 모듈은 공급자 모듈을 가져올 필요가 없습니다.
+
+```
+@Injectable()
+export class JwtService {
+  hello() {
+    console.log('hello');
+  }
+}
+```
+
+- jwt.service.ts에서 hello()과 hello 속성 값을 console.log로 입력해준다.
 
 ```
  constructor(
