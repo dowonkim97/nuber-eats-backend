@@ -3056,3 +3056,127 @@ mutation {
 - 위의 코드처럼 jwt가 ConfigService를 가지고 있는 것처럼 바꾼다.
 - dynamic module(forRoot)을 만들고, 여러가지 옵션 설정(config)을 적용시켜 준 뒤, 개발자가 설정한 옵션이 존재하는 상태의 static module을 return 값으로 내보낸다. 그러면 결과적으로 dynamic module이 static module이 된다.
 - static module은 설정 해줘야 해서 중간 과정이라고 표현할 수 있다.
+
+# #5.3
+
+- https://medium.com/@jang.wangsu/di-dependency-injection-%EC%9D%B4%EB%9E%80-1b12fdefec4f (dependency injection 검색)
+- 의존성 주입(DI, dependency injection), 의존성 분리, 제어의 반전(IOC, Inversion Of Control)
+- 의존성은 class간의 의존관계이다.
+- 주입은 외부에서 객체를 생성해서 넣어주는 것이다.
+- 의존성 + 주입은 내부에서 만든 변수를 외부에 넣어준다.
+- 의존성분리는 의존 관계 역전이라고 표현할 수 있고, 구조적 설계와 비교할 때 의존의 방향이 역전된 것이다.
+- 의존성 주입 => 의존성 분리 => 기존 의존관계 역전
+- 의존성 주입과 의존성 역전을 함께 생각한다.
+- https://medium.com/@jang.wangsu/di-inversion-of-control-container-%EB%9E%80-12ecd70ac7ea (IOC Container 검색)
+- 제어의 반전(IOC Container)는 IOC를 구현하는 프레임워크가 컨테이너이다. 제어권을 컨테이너가 가져간다. 컨테이너로 객체를 관리, 생성을 책임지고, 의존성을 관리한다.
+- module에다가 forRoot를 구현한 뒤 users.service.ts에서 jwtModule을 import한다.
+- https://wikidocs.net/228 (static 메소드)
+- app.module.ts forRoot는 static 메소드고 Dynamic Module을 return한다.
+- jwtModule을 static 함수(function)으로 만든다.
+
+```
+
+@Module({})
+export class JwtModule {
+  static forRoot(): DynamicModule {
+    return {
+              module: JwtModule
+    };
+  }
+}
+```
+
+- static 함수와 forRoot라고 이름 짓고, forRoot함수는 DynamicModule을 return 한다.
+- DynamicModule은 또 다른 module을 return해주는 module이다.
+- return {} 안을 보면 'module' 속성이 '{}' 형식에 없지만 'DynamicModule' 형식에서 필수라고 뜬다. 안에 module: JwtModule을 입력해준다.
+- users.module.ts에는 ConfigService가 있는데, users.service.ts에서 사용한다. 이것과 같이 JwtService도 만들어준다. module service export 해준다.
+- nest g s jwt (vscode 터미널)
+
+```
+@Module({
+  providers: [JwtService] // delete
+})
+export class JwtModule {
+  static forRoot(): DynamicModule {
+    return {
+      module: JwtModule,
+      exports: [JwtService],
+      providers: [JwtService]
+    };
+  }
+}
+```
+
+- providers: [JwtService], jwt.service.spec.ts 파일을 삭제해준다.
+  return {} 안에 exports: [JwtService], providers: [JwtService] 추가해준다.
+- forRoot()는 DynamicModule을 반환(return)한다.
+- JwtService를 exports해서 users.module.ts에서도 사용할 수 있게 되었다.
+- jwt.service.ts를 수정한다.
+
+```
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class JwtService {}
+
+```
+
+- ConfigService랑 같은 형식이 되고, import 해서 jwt.service.ts에서 사용한다.
+
+```
+    JwtModule.forRoot(),
+```
+
+- app.module.ts에서 JwtModule에 forRoot()를 추가해준다.
+
+```
+  imports: [TypeOrmModule.forFeature([User]), ConfigService, JwtService],
+```
+
+- users.module.ts에 JwtService를 추가해준다.
+
+```
+    private readonly jwtService: JwtService,
+```
+
+- users.service.ts에서는 jwt 말고 jwtService로 지은 이유는 jwt form jsonwebtoken으로 이미 import되어 있기 때문이다. jwtService는 class type이다.
+
+- Error: Nest can't resolve dependencies of the UsersService (UserRepository, ConfigService, ?). Please make sure that the argument JwtService at index [2] is available in the UsersModule context.
+- import 하지 않았기 때문에 JwtService를 찾을 수 없다는 에러이다.
+- module을 많이 사용할 것 같기 때문에 global module로 설정한다.
+
+```
+   ConfigModule.forRoot({
+      isGlobal: true,
+   )}
+```
+
+- app.module.ts ConfigModule이 isGlobal로 설정되어 있다면 imports에 적지 않아도 된다.
+
+```
+@Module({})
+@Global()
+export class JwtModule {
+  static forRoot(): DynamicModule {
+    return {
+      module: JwtModule,
+      exports: [JwtService],
+      providers: [JwtService],
+    };
+  }
+}
+
+```
+
+- 그러므로 jwt.module.ts JwtModule에도 같이 @Global을 적용한다. 그러면 수동으로 매번 가져오지 않아도 된다.
+- @Global - 모듈을 전역 범위로 만드는 데코레이터입니다. 모듈로 가져오면 전역 범위 모듈이 모든 모듈에서 표시됩니다. 이후 글로벌 모듈에서 내보낸 서비스를 주입하려는 모듈은 공급자 모듈을 가져올 필요가 없습니다.
+
+```
+ constructor(
+  ) {
+    this.jwtService.hello();
+  }
+```
+
+- users.service.ts에서 constructor() 안에 console.log를 찍어보면 정상적으로 hello가 출력되는 것을 확인할 수 있다.
+- JwtModule.forRoot()에다가 ConfigModule과 같은 형태 JwtModule을 만들어주었다.
