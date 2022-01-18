@@ -3070,7 +3070,7 @@ mutation {
 - https://medium.com/@jang.wangsu/di-inversion-of-control-container-%EB%9E%80-12ecd70ac7ea (IOC Container 검색)
 - 제어의 반전(IOC Container)는 IOC를 구현하는 프레임워크가 컨테이너이다. 제어권을 컨테이너가 가져간다. 컨테이너로 객체를 관리, 생성을 책임지고, 의존성을 관리한다.
 - module에다가 forRoot를 구현한 뒤 users.service.ts에서 jwtModule을 import한다.
-- https://wikidocs.net/228 (static 메소드)
+- https://wikidocs.net/228 (static 메소드 검색)
 - app.module.ts forRoot는 static 메소드고 Dynamic Module을 return한다.
 - jwtModule을 static 함수(function)으로 만든다.
 
@@ -3192,3 +3192,197 @@ export class JwtService {
 
 - users.service.ts에서 constructor() 안에 console.log를 찍어보면 정상적으로 hello가 출력되는 것을 확인할 수 있다.
 - JwtModule.forRoot()에다가 ConfigModule과 같은 형태 JwtModule을 만들어주었다.
+
+# #5.4
+
+```
+import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config'; // delete
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtService } from 'src/jwt/jwt.service'; // delete
+import { User } from './entities/users.entity';
+import { UsersResolver } from './users.resolver';
+import { UsersService } from './users.service';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([User]), ConfigService, JwtService],
+  //  ConfigService, JwtService delete
+  providers: [UsersResolver, UsersService],
+})
+export class UsersModule {}
+```
+
+- service나 module을 import 해주는 작업이 매우 불필요한 과정이였지만, Global Module을 사용하면 import 할 필요가 없어지기 때문에 ConfigService, JwtService를 지워준다.
+- 만약 email module이 있으면, email module을 이메일을 어디든지 보낼 수 있도록 global module로 만든다.
+- jwt.module.ts에서 module에 config 옵션을 추가해본다.
+- jwt폴더에 interfaces 폴더를 추가하고, interfaces 폴더 안에 jwt-module-options.interface.ts파일을 추가한다.
+
+```
+export interface JwtModuleOptions {
+  privateKey: string;
+}
+```
+
+- jwt-module-options.interface.ts에서 간단한 interface를 만든다.
+
+```
+@Module({})
+@Global()
+export class JwtModule {
+  static forRoot(options: JwtModuleOptions): DynamicModule {
+    return {
+      module: JwtModule,
+      exports: [JwtService],
+      providers: [JwtService],
+    };
+  }
+}
+
+```
+
+- jwt.module.ts에서 JwtModule forRoot() 안에 options: JwtModuleOptions를 넘겨준다.
+
+```
+ JwtModule.forRoot()
+```
+
+- app.module.ts에서 JwtModule.forRoot()에서 forRoot()에서 1개의 인수가 필요한데 0개를 가져왔습니다라는 에러가 발생한다.
+
+```
+    JwtModule.forRoot({
+      privateKey: process.env.PRIVATE_KEY,
+    }),
+
+```
+
+- forRoot()에 options를 넘겨줘야 한다. options안에 privateKey를 넣어준다.
+
+```
+
+      const token = jwt.sign({ id: user.id }, this.config.get('PRIVATE_KEY'));
+
+```
+
+```
+
+        PRIVATE_KEY: Joi.string().required(),
+        privateKey: process.env.PRIVATE_KEY,
+
+```
+
+- SECRET_KEY를 users.service.ts, .env.dev, app.module.ts 모두 PRIVATE_KEY로 바꿔준다.
+- jwt.module.ts에서 options를 providers object를 사용하면 JwtService로 내보낼 수 있다.
+- provider => Provider[] => ClassProvider => provide, useClass, scope
+
+```
+      providers: [JwtService],
+      exports: [JwtService],
+```
+
+- jwt.module.ts에서 위의 코드는 {provide: JwtService, useClass: JwtService}, JwtService가 JwtService로 함축된 표현이다.
+
+```
+      providers: [
+      {
+        provide: "BANANA",
+        useValue: options,
+      },
+      JwtService
+    ],
+    exports: [JwtService],
+```
+
+- jwt.module.ts에서 provide는 "BANANA"라는 값(value) 형식을 가졌고, useValue는 options라는 값(value)를 가진다. JwtService라는 service도 넣어준다.
+
+```
+@Injectable()
+export class JwtService {
+  constructor(@Inject('BANANA') private readonly options: JwtModuleOptions) {
+    console.log(options)
+  }
+  hello() {
+    console.log('hello');
+  }
+}
+```
+
+- jwt.service.ts에서 constructor()을 작성하고, BANANA를 @Inject 해주고, users.service.ts에서 private readonly 사용한 것과 같이 작성한다.
+- jwt.service.ts에서 입력한 것과 같이 module에서 {provide: JwtService, useClass: JwtService}를 service로 inject 할 수 있다.
+- console.log(options)로 vs 터미널을 위로 좀 올려서 확인해보면 { privateKey: 'urmi~~blabla' }로 출력되는 것을 확인할 수 있다.
+- put providers => ask "BANANA" or "anything"(name is same) nestjs => nestjs handle injection
+
+```
+export interface JwtModuleOptions {
+privateKey: string;
+}
+```
+
+- jwt.interfaces.ts파일은 jwt-module-options.interface.ts에서 사용했던 형식대로 넣는다.
+
+```
+export const CONFIG_OPTIONS = 'CONFIG_OPTIONS';
+```
+
+- jwt.constants.ts 파일은 CONFIG_OPTIONS는 "CONFIG_OPTIONS"으로 넣는다.
+
+```
+import { Inject, Injectable } from '@nestjs/common';
+import { JwtModuleOptions } from './interfaces/jwt-module-options.interface'; // delete
+import { CONFIG_OPTIONS } from './jwt.constants';
+import { JwtModuleOptions } from './jwt.interfaces';
+
+@Injectable()
+export class JwtService {
+  constructor(
+    @Inject(CONFIG_OPTIONS) private readonly options: JwtModuleOptions,
+  ) {
+    console.log(options);
+  }
+  hello() {
+    console.log('hello');
+  }
+}
+
+```
+
+- jwt.service.ts에 있던 "BANANA"를 CONFIG_OPTIONS로 넣어주고, JwtModuleOptions를 './jwt.interfaces'에서 import 하게 변경해준다.
+
+- https://velog.io/@moongq/Dependency-Injection (DI 검색)
+- https://darrengwon.tistory.com/1363 (typescript di 활용 검색)
+- 의존성 주입에 대한 지식이 좀 더 필요한 것 같아서 찾아보았다. 의존성 주입은 의존하고 있는 코드를 클래스(class)에서 생성자(constructor)로 받아오는 것이다.
+- https://angular.kr/guide/dependency-injection-in-action (TypeScript useValue, useClass, useExisting 의존성 주입 검색)
+- useValue - useValue 키를 사용하면 고정된 값을 의존성 토큰에 연결할 수 있습니다. 이 방식은 웹사이트의 기본 주소나 플래그 값 등 실행시점에 결정되는 상수를 의존성으로 주입할 때 사용합니다. 그리고 이 방식은 데이터 서비스에 유닛 테스트를 적용할 때 데이터를 주입하는 용도로도 사용할 수 있습니다.
+- useClass - useClass 프로바이더 키를 사용하면 이 키에 연결된 클래스 인스턴스가 대신 주입됩니다. 이 방식은 어떤 클래스를 다른 구현체로 대체할 때도 사용할 수 있습니다. 이 때 다른 구현체라는 것은 다른 정책일 수도 있고, 기본 클래스를 상속받은 클래스일 수도 있으며, 테스트 환경에서 실제 클래스를 대체하기 위한 객체일 수도 있습니다.
+- useExisting - useExisting 프로바이더 키는 어떤 토큰을 다른 토큰과 연결할 때 사용합니다. 그래서 provide에 사용된 토큰은 useExisting에 사용된 토큰의 별칭(alias) 역할을 하기 때문에, 결국 같은 서비스 객체를 또 다른 이름으로 참조할 수 있습니다.
+- useFactory - useFactory 프로바이더 키를 사용하면 팩토리 함수가 실행되면서 반환한 객체를 의존성으로 등록할 수 있습니다. 이 방식은 의존성으로 주입되는 서비스를 로컬 상태에 맞게 재구성해야 할 때 사용합니다.
+
+```
+import { JwtModuleOptions } from './interfaces/jwt-module-options.interface'; // delete
+import { JwtModuleOptions } from './jwt.interfaces';
+
+@Module({})
+@Global()
+export class JwtModule {
+  static forRoot(options: JwtModuleOptions): DynamicModule {
+    return {
+      module: JwtModule,
+      providers: [{ provide: CONFIG_OPTIONS, useValue: options }, JwtService],
+      exports: [JwtService],
+    };
+  }
+}
+```
+
+- jwt.module.ts에서 provide는 "BANANA"라는 값(value) 대신 CONFIG_OPTIONS로 바꿔준다.
+- interfaces폴더와 interfaces폴더안의 jwt-module-options.interface.ts를 지워주고, jwt.module.ts안의 JwtModuleOptions을 import한 것도 지워준다. './jwt.interfaces'로 다시 import해준다.
+
+```
+  GraphQLModule.forRoot({
+      autoSchemaFile: true,
+    }),
+    JwtModule.forRoot({
+      privateKey: process.env.PRIVATE_KEY,
+    }),
+```
+
+- global 모듈을 만들어봤고, app.module에서 설정해줄 수 있다. 두 모듈이 비슷한 것을 확인할 수 있다.

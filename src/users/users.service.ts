@@ -67,7 +67,7 @@ export class UsersService {
       }
       // 누구든 token을 못보게 user ID만 넣어준다.
       // process.env.SECRET_KEY로 해도 괜찮지만, nethjs 방식이 아니다.
-      const token = jwt.sign({ id: user.id }, this.config.get('SECRET_KEY'));
+      const token = jwt.sign({ id: user.id }, this.config.get('PRIVATE_KEY'));
       return {
         ok: true,
         token,
