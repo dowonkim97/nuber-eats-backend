@@ -3212,9 +3212,9 @@ import { UsersService } from './users.service';
 export class UsersModule {}
 ```
 
-- service나 module을 import 해주는 작업이 매우 불필요한 과정이였지만, Global Module을 사용하면 import 할 필요가 없어지기 때문에 ConfigService, JwtService를 지워준다.
-- 만약 email module이 있으면, email module을 이메일을 어디든지 보낼 수 있도록 global module로 만든다.
-- jwt.module.ts에서 module에 config 옵션을 추가해본다.
+- service나 module을 import 해주는 작업이 매우 불필요한 과정이였지만, Global Module을 사용하면 import 할 필요가 없어지기 때문에 users.module.ts에서 ConfigService, JwtService를 지워준다.
+- 예를 들어 만약 email module이 있으면, email module을 이메일을 어디든지 보낼 수 있도록 global module로 만들 수 있다.
+- jwt.module.ts에서 module에 config 옵션을 추가하는 것을 진행해본다.
 - jwt폴더에 interfaces 폴더를 추가하고, interfaces 폴더 안에 jwt-module-options.interface.ts파일을 추가한다.
 
 ```
@@ -3279,7 +3279,7 @@ export class JwtModule {
       exports: [JwtService],
 ```
 
-- jwt.module.ts에서 위의 코드는 {provide: JwtService, useClass: JwtService}, JwtService가 JwtService로 함축된 표현이다.
+- jwt.module.ts에서 위의 코드에서 [JwtService]는 {provide: JwtService, useClass: JwtService}, JwtService가 [JwtService]로 함축된 표현이다.
 
 ```
       providers: [
