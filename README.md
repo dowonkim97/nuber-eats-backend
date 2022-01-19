@@ -3408,10 +3408,10 @@ export class JwtService {
 }
 ```
 
-- jwt.service.ts에서 hello()를 sign(payload: object)로 변경한다.
+- jwt.service.ts에서 hello()를 sign(payload: object)로 변경하고, console.log('hello')를 삭제해준다.
 
 ```
-      const token = this.jwtService.sign({id: });
+      const token = this.jwtService.sign({id: user.id});
 ```
 
 - sign()을 비슷한 방식으로 만들어주기 위해서 users.service.ts에서 payload가 object 형식이기 때문에 {} 안에 id: user.id로 작성한다.
@@ -3429,7 +3429,7 @@ export class JwtService {
       };
 ```
 
-- users.service.ts 위의 코드에서 token이 string이기 때문에 에러가 사라진다.
+- users.service.ts 위의 코드의 token이 string이기 때문에 에러가 사라진다.
 
 ```
 import * as jwt from 'jsonwebtoken';
@@ -3502,6 +3502,7 @@ mutation {
 ```
 
 - localhost:3000/graphql에서 테스트 하면 token이 생성된 것을 확인할 수 있다.
+- 생성된 token을 https://jwt.io/에 확인해본다.
 - users.service.ts에서 token에 너무 많은 정보(개인정보 등)를 넣어주면 (유출될 우려가 있다) 안되기 때문에 JwtService는 user.id를 제외하고는 아무것도 지정해주지 않는다.
 
 - Jwt Module을 만들 때 jwt.service.ts에서 payload가 어떤 object도 될 수 있기 때문에 다른 프로젝트에서 불러와서 사용할 수 있다.
@@ -3513,7 +3514,7 @@ mutation {
 }
 ```
 
-- jwt.service.ts는 다른 프로젝트에서 사용하게 만들수도 있고, 이 프로젝트에만 사용할 수 있게 만들 수도 있다. 이 프로젝트에만 사용하기 때문에 userId만 암호화해주기 위해서 userId: number로 넘겨준다.
+- jwt.service.ts는 다른 프로젝트에서 사용하게 만들수도 있고, 이 프로젝트에만 사용할 수 있게 만들 수도 있다. 하지만 이 프로젝트에만 사용하기 때문에 userId만 암호화해주기 위해서 object type 안에 id: userId를 넣어주고, userId: number로 넘겨준다.
 
 ```
       const token = this.jwtService.sign(user.id);
