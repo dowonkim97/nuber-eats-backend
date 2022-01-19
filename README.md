@@ -3279,7 +3279,7 @@ export class JwtModule {
       exports: [JwtService],
 ```
 
-- jwt.module.ts에서 위의 코드에서 [JwtService]는 {provide: JwtService, useClass: JwtService}, JwtService가 [JwtService]로 함축된 표현이다.
+- jwt.module.ts에서 위의 코드에서 [JwtService]는 [{provide: JwtService, useClass: JwtService}], JwtService가 [JwtService]로 함축된 표현이다.
 
 ```
       providers: [
@@ -3317,13 +3317,13 @@ privateKey: string;
 }
 ```
 
-- jwt.interfaces.ts파일은 jwt-module-options.interface.ts에서 사용했던 형식대로 넣는다.
+- jwt폴더 안에 jwt.interfaces.ts 파일을 만든 다음 jwt-module-options.interface.ts에서 사용했던 형식대로 넣는다.
 
 ```
 export const CONFIG_OPTIONS = 'CONFIG_OPTIONS';
 ```
 
-- jwt.constants.ts 파일은 CONFIG_OPTIONS는 "CONFIG_OPTIONS"으로 넣는다.
+- jwt폴더 안에 jwt.constants.ts 파일을 만든 다음 CONFIG_OPTIONS는 "CONFIG_OPTIONS"으로 넣는다.
 
 ```
 import { Inject, Injectable } from '@nestjs/common';
@@ -3386,3 +3386,140 @@ export class JwtModule {
 ```
 
 - global 모듈을 만들어봤고, app.module에서 설정해줄 수 있다. 두 모듈이 비슷한 것을 확인할 수 있다.
+
+# #5.5
+
+```
+      const token = jwt.sign({ id: user.id }, this.config.get('PRIVATE_KEY'));
+```
+
+- users.service.ts에서 jwt.sign을 sign할 때 jwt.service.ts에서 JwtService를 사용하게 변경한다.
+- this.jwtService.hello()를 지워준다.
+
+```
+@Injectable()
+export class JwtService {
+  constructor(
+    @Inject(CONFIG_OPTIONS) private readonly options: JwtModuleOptions,
+  ) {}
+  sign(payload: object) {
+    console.log('hello');
+  }
+}
+```
+
+- jwt.service.ts에서 hello()를 sign(payload: object)로 변경한다.
+
+```
+      const token = this.jwtService.sign({id: });
+```
+
+- sign()을 비슷한 방식으로 만들어주기 위해서 users.service.ts에서 payload가 object 형식이기 때문에 {} 안에 id: user.id로 작성한다.
+
+```
+  sign(payload: object): string
+```
+
+- sign() string을 반환(return) 값으로 가진다.
+
+```
+      return {
+        ok: true,
+        token,
+      };
+```
+
+- users.service.ts 위의 코드에서 token이 string이기 때문에 에러가 사라진다.
+
+```
+import * as jwt from 'jsonwebtoken';
+ sign(payload: object): string {
+    return jwt.sign(payload, this.options.privateKey);
+  }
+```
+
+- jwt.service.ts에서 sign()을 만든다.
+- function sign(payload: string | object | Buffer, secretOrPrivateKey: jwt.Secret, options?: jwt.SignOptions)에서 payload 그대로 적어주고, secretOrPrivateKey는 jwt.module.ts에 (options: JwtModuleOptions)이고, jwt.interfaces.ts에 JwtModuleOptions는 privateKey가 있으니까, this.options.privateKey를 입력한다.
+
+```
+    JwtModule.forRoot({
+      privateKey: process.env.PRIVATE_KEY,
+    }),
+```
+
+- app.module.ts에서 privateKey로 가져올 필요가 없었다.
+
+```
+export class JwtService {
+  constructor(
+    @Inject(CONFIG_OPTIONS) private readonly options: JwtModuleOptions,
+    private readonly configService: ConfigService,
+  ) {}
+  sign(payload: object): string {
+    return jwt.sign(payload, this.configService.get('PRIVATE_KEY'));
+  }
+}
+```
+
+- privateKey로 가져오지 않고, jwt.service.ts에서 ConfigService가 Global 값이기 때문에 users.service.ts처럼 사용할 있다.
+- ConfigService에 ('PRIVATE_KEY')를 get() 편하게 하는 방식도 있다.
+- Global module을 사용하면 이렇듯 다른 module에서 불러올 수 있다.
+
+```
+  constructor(
+    @InjectRepository(User) private readonly users: Repository<User>,
+    private readonly jwtService: JwtService,
+  ) {}
+```
+
+- users.service.ts에서 private readonly configService: ConfigService를 삭제한다.
+
+```
+@Injectable()
+export class JwtService {
+  constructor(
+    @Inject(CONFIG_OPTIONS) private readonly options: JwtModuleOptions,
+  ) {}
+  sign(payload: object): string {
+    return jwt.sign(payload, this.options.privateKey);
+  }
+}
+```
+
+- users.service.ts에서 this.configService.get('PRIVATE_KEY')를 기존의 this.options.privateKey로 변경한다.
+
+```
+mutation {
+	login(input:{
+    email:"kim@kim.com",
+    password: "12345",
+  }) {
+    ok
+    error
+    token
+  }
+}
+```
+
+- localhost:3000/graphql에서 테스트 하면 token이 생성된 것을 확인할 수 있다.
+- users.service.ts에서 token에 너무 많은 정보(개인정보 등)를 넣어주면 (유출될 우려가 있다) 안되기 때문에 JwtService는 user.id를 제외하고는 아무것도 지정해주지 않는다.
+
+- Jwt Module을 만들 때 jwt.service.ts에서 payload가 어떤 object도 될 수 있기 때문에 다른 프로젝트에서 불러와서 사용할 수 있다.
+
+```
+  sign(userId: number): string {
+    return jwt.sign({ id: userId }, this.options.privateKey);
+  }
+}
+```
+
+- jwt.service.ts는 다른 프로젝트에서 사용하게 만들수도 있고, 이 프로젝트에만 사용할 수 있게 만들 수도 있다. 이 프로젝트에만 사용하기 때문에 userId만 암호화해주기 위해서 userId: number로 넘겨준다.
+
+```
+      const token = this.jwtService.sign(user.id);
+```
+
+- users.service.ts에서도 모듈이 백엔드만 특정되게 하기 위해서 user.id만 보내준다.
+- 모듈 부분은 끝났고, forRoot()를 만들고 사용할 수 있게 되었고, forRoot() 이름은 아무거나 가능하지만, register()가 약속(covention) 되어 있기 때문에 그대로 사용하는 것이 좋다.
+
+- 글로벌(global) 모듈은 모두가 사용하기 때문에 토큰을 넘겨줄 때에는 private한 지역(regional) 모듈이 나은 것 같다.
