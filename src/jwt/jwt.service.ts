@@ -12,4 +12,3 @@ export class JwtService {
     return jwt.sign({ id: userId }, this.options.privateKey);
   }
 }
-// userId만 암호화해주기 위해서

@@ -3524,3 +3524,163 @@ mutation {
 - 모듈 부분은 끝났고, forRoot()를 만들고 사용할 수 있게 되었고, forRoot() 이름은 아무거나 가능하지만, register()가 약속(covention) 되어 있기 때문에 그대로 사용하는 것이 좋다.
 
 - 글로벌(global) 모듈은 모두가 사용하기 때문에 토큰을 넘겨줄 때에는 private한 지역(regional) 모듈이 나은 것 같다.
+
+# #5.6
+
+- users.resolver.ts에서 query를 만들어준다.
+
+- 토큰(token)의 정보를 어떻게 받고, 사용자가 누구인지 어떻게 알 수 있다.
+
+```
+ @Query((returns) => User)
+  me() {}
+```
+
+- Query 이름(name)은 me로 해주고, User를 반환(return)한다. HTTP headers를 활용하여 로그인 되어있는 User가 누구인지 반환(return)해준다.
+
+```
+mutation {
+	login(input:{
+    email:"kim@kim.com",
+    password: "12345",
+  }) {
+    ok
+    error
+    token
+  }
+}
+```
+
+- localhost:3000/graphql에서 token 값을 받는다.
+
+```
+{
+  "X-JWT": "eyJh~blablabla"
+}
+```
+
+- HTTP headers에서 "X-JWT": "TOKEN VALUE" 을 입력해준다.
+
+```
+{
+  me {
+    email
+  }
+}
+```
+
+- "message": "Cannot return null for non-nullable field Query.me." users.resolver.ts에서 me()가 반환(return) 하지 않아서 에러가 발생한다.
+
+```
+ @Query((returns) => User)
+  me() {}
+```
+
+- middleware를 구현해준다.
+- nestjs와 middleware는 요청을 받고, 요청 처리 후 nest()를 호출하기 때문에 둘 다 같다.
+- middleware에서 token을 가져간 후, token을 가진 사용자를 찾는다.
+- https://docs.nestjs.kr/middleware를 보면 Nest 미들웨어는 기본적으로 express 미들웨어와 동일하고, 요청(request) 및 응답(response) 객체가 있고, next()을 사용한다. 그림을 보면 고객(client)이 요청(req)를 보내면 middleware가 HTTP Request로 처리하고, Route Handler로 보낸다.
+- jwt 폴더에 jwt.middleware.ts 파일을 만들어준다.
+
+```
+export class JwtMiddleware implements NestMiddleware {
+  use(req: Request, res: Response, next: NextFunction) {
+    console.log(req.headers);
+    next();
+  }
+}
+```
+
+- jwt.middleware.ts에서 상속(implements)은 extends와 NestMiddleware안에 interface가 있기 때문에 다르다
+- JwtMiddleware라는 class가 interface처럼 작동해야 한다.
+- JwtMiddleware를 보면 'use' 속성이 'JwtMiddleware' 형식에 없지만 'NestMiddleware<any, any>' 형식에서 필수라고 한다.
+- use()에 req, res, next는 각각 Request, Response, NextFunction를 express에서 가져온다.
+- Request, Response를 받아서 처리를 해준 다음 next()를 호출한다.
+- express에서 구현하는 것과 차이가 없다.
+- console.log(req.headers)을 해주고, express처럼 next()를 호출한다.
+
+- middleware를 한 가지 앱(app)에만 설치(install) 할 수도 있고, AppModule에 설치하여 여러 곳에 사용할 수 있다.
+- UsersModule에만 설치할 수도 있지만, 모든 앱(app), 모듈(module)에서 middleware를 사용하기 때문에 app.module.ts AppModule에서 설정해준다.
+
+```
+export class AppModule implements NestModule {}
+
+```
+
+- app.module.ts class AppModule에서 'AppModule' 클래스가 'NestModule' 인터페이스를 잘못 구현합니다. 'configure' 속성이 'AppModule' 형식에 없지만 'NestModule' 형식에서 필수라고 에러가 발생한다.
+
+```
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {}
+}
+```
+
+- configure를 작성해주면 에러가 해결된다.
+- MiddlewareConsumer는 middleware를 routes에 적용하는 방법을 정의해주는 interface이다.
+- MiddlewareConsumer에서 apply(...middleware: (Type<any> | Function)[]): MiddlewareConfigProxy를 보면 apply()을 가지고 있다.
+- apply()에 Middleware는 JwtMiddleware를 넘겨주고, 미들웨어 연결해주는
+  .forRoutes를 해준다.
+- forRoutes는 전달된 경로 또는 컨트롤러를 현재 구성된 미들웨어에 연결합니다. 클래스를 전달하면 Nest는 이 컨트롤러 내에 정의된 모든 경로에 미들웨어를 연결합니다.
+
+- localhost:3000 실행해보면 에러가 있지만, jwt.middleware.ts JwtMiddleware에서 console.log(req.headers)을 해주었기 때문에 accept에서 'x-jwt': 'eyJh~~~blabla' 찍혀 나오는 것을 확인할 수 있다.
+
+```
+      path: '/graphql',
+      method: RequestMethod.All,
+```
+
+- app.module.ts에서 path: '\*'를 해주고, method: RequestMethod.All을 해주면 모든 routes에 적용해볼 수 있다.
+
+```
+    consumer.apply(JwtMiddleware).forRoutes({
+      path: '/api',
+      method: RequestMethod.ALL,
+```
+
+- app.module.ts에서 path: '\api'만 제외해 주고, method: RequestMethod.All을 해주면 모든 routes에 적용해볼 수 있다.
+- 경로가 많을 때 'api', "admin", "graphql" 등을 제외 시켜줄 수도 있다.
+
+```
+export class JwtMiddleware implements NestMiddleware {
+  use(req: Request, res: Response, next: NextFunction) {
+    console.log(req.headers);
+    next();
+  }
+}
+```
+
+- jwt.middleware.ts에서 injection이나 다른 기능을 사용하지 않기 때문에 class로 만들지 않고, function으로도 만들 수 있다.
+
+```
+export function jwtMiddleware(req: Request, res: Response, next: NextFunction) {
+  console.log(req.headers);
+  next();
+}
+```
+
+- jwt.middleware.ts에서 class로 만들지 않고, function으로 바꾸어 주었다.
+
+```
+    consumer.apply(jwtMiddleware).forRoutes({
+      path: '/graphql',
+      method: RequestMethod.ALL,
+    });
+```
+
+- app.module.ts에서 JwtMiddleware는 jwtMiddleware로, forRoutes()와 path는 /"graphql"로 바꿔준다.
+
+```
+implements NestModule {
+configure(consumer: MiddlewareConsumer) {
+consumer.apply(jwtMiddleware).forRoutes({
+path: '/graphql',
+method: RequestMethod.ALL,
+    });
+  }
+}
+```
+
+- app.module.ts에서 Appmodule에서 위의 코드를 다 지워버리고, main.ts에서 app.use(jwtMiddleware)로도 만들 수 있다. 위의 긴 코드가 한줄로 축약되기 때문에 이게 제일 편한 것 같다.
+- main.ts booststrap()에서 사용하는 방법은 어플리케이션 전체만 사용가능하다.
+- app.module에서 configure consumer를 사용해서 middleware를 전체나 특정 경로에 제외, 적용 시켜줄지 정하는 방식이 있다.
+- 언제 제외하고, 적용시켜야 할 지 아직 감이 잘 안오지만, 미들웨어에서 제외하거나 특정 경로만 적용시켜줄 때에는 app.module.ts에서 위 코드를 사용하면 될 것 같다.

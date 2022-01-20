@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Query } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createAccountInput } from './dtos/create-account.dto';
@@ -75,6 +75,5 @@ export class UsersService {
         error,
       };
     }
-    // JWT를 만들고 user에게 준다(give).
   }
 }
