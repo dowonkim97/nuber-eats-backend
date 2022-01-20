@@ -58,7 +58,7 @@ export class UsersResolver {
       };
     }
   }
-  // JWT를 만들고 user에게 준다(give).
   @Query((returns) => User)
   me() {}
 }
+// JWT를 만들고 user에게 준다(give).

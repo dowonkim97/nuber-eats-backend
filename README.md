@@ -3528,8 +3528,7 @@ mutation {
 # #5.6
 
 - users.resolver.ts에서 query를 만들어준다.
-
-- 토큰(token)의 정보를 어떻게 받고, 사용자가 누구인지 어떻게 알 수 있다.
+- 토큰(token)의 정보를 어떻게 받고, 사용자가 누구인지 알 수 있다.
 
 ```
  @Query((returns) => User)
@@ -3618,7 +3617,14 @@ export class AppModule implements NestModule {
 - configure를 작성해주면 에러가 해결된다.
 - MiddlewareConsumer는 middleware를 routes에 적용하는 방법을 정의해주는 interface이다.
 - MiddlewareConsumer에서 apply(...middleware: (Type<any> | Function)[]): MiddlewareConfigProxy를 보면 apply()을 가지고 있다.
-- apply()에 Middleware는 JwtMiddleware를 넘겨주고, 미들웨어 연결해주는
+
+```
+    consumer.apply(JwtMiddleware).forRoutes({
+      path: '/api',
+      method: RequestMethod.ALL,
+```
+
+- app.module.ts에서 apply()에 Middleware는 JwtMiddleware를 넘겨주고, 미들웨어 연결해주는
   .forRoutes를 해준다.
 - forRoutes는 전달된 경로 또는 컨트롤러를 현재 구성된 미들웨어에 연결합니다. 클래스를 전달하면 Nest는 이 컨트롤러 내에 정의된 모든 경로에 미들웨어를 연결합니다.
 
