@@ -3620,8 +3620,8 @@ export class AppModule implements NestModule {
 
 ```
     consumer.apply(JwtMiddleware).forRoutes({
-      path: '/api',
-      method: RequestMethod.ALL,
+      path: '/graphql',
+      method: RequestMethod.POST,
 ```
 
 - app.module.ts에서 apply()에 Middleware는 JwtMiddleware를 넘겨주고, 미들웨어 연결해주는
@@ -3635,15 +3635,15 @@ export class AppModule implements NestModule {
       method: RequestMethod.All,
 ```
 
-- app.module.ts에서 path: '\*'를 해주고, method: RequestMethod.All을 해주면 모든 routes에 적용해볼 수 있다.
+- app.module.ts에서 path: '/\*'를 해주고, method: RequestMethod.All을 해주면 모든 routes에 적용해볼 수 있다.
 
 ```
-    consumer.apply(JwtMiddleware).forRoutes({
+    consumer.apply(JwtMiddleware).exclude({
       path: '/api',
       method: RequestMethod.ALL,
 ```
 
-- app.module.ts에서 path: '\api'만 제외해 주고, method: RequestMethod.All을 해주면 모든 routes에 적용해볼 수 있다.
+- app.module.ts에서 path: '/api'만 제외해 주고, method: RequestMethod.All을 해주면 모든 routes에 적용해볼 수 있다.
 - 경로가 많을 때 'api', "admin", "graphql" 등을 제외 시켜줄 수도 있다.
 
 ```
@@ -3690,3 +3690,304 @@ method: RequestMethod.ALL,
 - main.ts booststrap()에서 사용하는 방법은 어플리케이션 전체만 사용가능하다.
 - app.module에서 configure consumer를 사용해서 middleware를 전체나 특정 경로에 제외, 적용 시켜줄지 정하는 방식이 있다.
 - 언제 제외하고, 적용시켜야 할 지 아직 감이 잘 안오지만, 미들웨어에서 제외하거나 특정 경로만 적용시켜줄 때에는 app.module.ts에서 위 코드를 사용하면 될 것 같다.
+
+# #5.7
+
+- JWT Middleware를 만든다.
+- users repository를 사용할 예정이기 때문에 token을 가진 user를 찾아야 한다.
+
+```
+export class JwtMiddleware implements NestMiddleware {
+  use(req: Request, res: Response, next: NextFunction) {
+    console.log(req.headers);
+    next();
+  }
+}
+```
+
+- jwt.middleware.ts에서 users repository를 가져올 것이기 때문에 function => class로 다시 변경한다.
+
+```
+import { JwtMiddleware } from './jwt/jwt.middleware';
+app.use(JwtMiddleware);
+```
+
+- src/app.module.ts:18:10 - error TS2724: '"./jwt/jwt.middleware"' has no exported member named 'jwtMiddleware'. Did you mean 'JwtMiddleware'? 에러가 발생한다.
+
+```
+import { jwtMiddleware } from './jwt/jwt.middleware';
+
+```
+
+- app.module.ts에서 위의 코드를 삭제해준다.
+
+- TypeError: Class constructor JwtMiddleware cannot be invoked without 'new'
+  에러가 발생한다.
+- repository, class, dependency injection(DI)를 사용할 때 Middleware를 app.use()에 넣을 수 없다.
+- main.ts에서 app.use()는 클래스(class) 컴포넌트(component)는 사용할 수 없고, 함수(Function) 컴포넌트(component)만 사용 가능하다.
+
+```
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(JwtMiddleware)
+      .forRoutes({ path: '/graphql', method: RequestMethod.ALL });
+  }
+}
+```
+
+- app.module.ts에서 이전과 같이 입력한다.
+
+```
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new ValidationPipe());
+  app.use(JwtMiddleware); // delete
+  await app.listen(3000);
+}
+bootstrap();
+```
+
+- main.ts에서 app.use(JwtMiddleware) 삭제한다.
+- functional middleware은 middleware를 어디서든 사용할 수 있고, class middleware는 app.module.ts Appmodule에서 implements NestModule 해주고, 설정 해야 한다.
+
+-
+
+```
+export class JwtMiddleware implements NestMiddleware {
+  use(req: Request, res: Response, next: NextFunction) {
+    if ('x-jwt' in req.headers) {
+      console.log(req.headers['x-jwt']);
+    }
+    next();
+  }
+}
+```
+
+- jwt.middleware.ts에서 headers에서 token을 추출한다.
+
+```
+{
+  me{
+    email
+  }
+}
+```
+
+- localhost:3000/graphql을 확인해보면 eyJh~~~blablabla 토큰 값이 콘솔로 출력되는 것을 확인할 수 있다.
+
+```
+ const token = req.headers['x-jwt'];
+```
+
+- jwt.middleware.ts에서 토큰(token)을 저장(save)한다.
+
+- jwt.middleware.ts에서 토큰(token)을 검증(verify), 해독(decrpt)한다.
+- https://www.npmjs.com/package/jsonwebtoken (jwt.verify(token, secretOrPublicKey, [options, callback]), jwt.decode(token [, options]) 검색)
+- verify()를 이용해 올바른 토큰인지 확인하고, verify()는 해독(decrpt)된 token을 준다.
+- decode()는 (Synchronous) Returns the decoded payload without verifying if the signature is valid. (동기) 서명이 유효한지 확인하지 않고 디코딩된 페이로드를 반환한다.
+
+```
+@Injectable()
+export class JwtService {
+  constructor(
+    @Inject(CONFIG_OPTIONS) private readonly options: JwtModuleOptions,
+  ) {}
+  sign(userId: number): string {
+    return jwt.sign({ id: userId }, this.options.privateKey);
+  }
+  verify(token: string) {
+    return jwt.verify(token, this.options.privateKey);
+  }
+}
+```
+
+- jwt.service.ts에서 jwt.verify에 token, secretOrPublicKey는 this.options.privateKey를 준다. sign() 안에 { id: userId }는 userId + ''로 string type으로 만들어줄 수 있지만, object {} type로 그대로 둔다.
+
+- jwt.service.ts에서 verify(token: string, secretOrPublicKey: jwt.Secret, options?: jwt.VerifyOptions): jwt.JwtPayload (+4 overloads)라고 되어 있는데 강의에서 보면 string | object를 반환한다고 나와있다. 왜 jwt.JwtPayload를 반환하게 되어 있을까?
+
+```
+
+export interface JwtPayload {
+[key: string]: any;
+iss?: string | undefined;
+sub?: string | undefined;
+aud?: string | string[] | undefined;
+exp?: number | undefined;
+nbf?: number | undefined;
+iat?: number | undefined;
+jti?: string | undefined;
+}
+
+```
+
+- JwtPayload를 봐도 string | object 가 없다. why? 확장 프로그램이 없나? 아니면 jsonwebtoken 버전 업데이트 되어서 바뀐 것 같다.
+
+- string | object 반환하니까 jwt.middleware.ts에서 확인한다.
+
+```
+@Injectable()
+export class JwtMiddleware implements NestMiddleware {
+  constructor(private readonly jwtService: JwtService) {}
+  use(req: Request, res: Response, next: NextFunction) {
+    if ('x-jwt' in req.headers) {
+      const token = req.headers['x-jwt'];
+      const decoded = this.jwtService.verify(token.toString());
+      if (typeof decoded === 'object' && decoded.hasOwnProperty('id')) {
+        console.log(decoded.id);
+      }
+    }
+    next();
+  }
+}
+```
+
+- jwt.middleware.ts에서 Injectable일 때만 inject 할 수 있다. @Injectable가 없으면 DI(dependency injection)하기 어렵다.
+
+```
+      const token = req.headers['x-jwt'];
+```
+
+- jwt.middleware.ts에서 token은 const token: string | string[]인 이유는 타입스크립트는 어떤 header나 array가 될 수 있기 때문이다.
+
+```
+      const decoded = this.jwtService.verify(token.toString());
+```
+
+- 항상 string type이라고 확신할 수 있게 toStirng()을 만들어준다.
+- https://wjdtn7823.tistory.com/76 (toString() 검색)
+
+```
+  if (typeof decoded === 'object' && decoded.hasOwnProperty('id')) {
+        console.log([decoded.id]);
+      }
+```
+
+- string이나 object기 때문에 decoded.id 같은 형식이 작동하지 않는다.
+- object거나 hasOwnProperty()에 id가 있고, ture라면 [decoded.id]를 출력한다.
+- 요청(request)을 보내서 토큰(token)을 보낸 사람의 id를 볼 수 있는지 확인한다.
+- https://hianna.tistory.com/401 (typeof 검색)
+
+```
+{
+  me{
+    email
+  }
+}
+```
+
+- localhost:3000/graphql에서 실행해보면 "message": "Cannot return null for non-nullable field Query.me." 에러가 발생하지만, console에는 0이라는 id 값이 보인다.
+
+```
+  async findById(id: number): Promise<User> {
+    return this.users.findOne({ id });
+  }
+```
+
+- id를 가지고 user를 찾기 위해 users.service.ts에 입력한다.
+- 비동기 실행은 바로 하되 결과값은 나중에 받는 객체 Promise<User>와 findOne id값을 return해준다.
+- https://codingsalon.tistory.com/57 (Promise 검색)
+
+```
+    private readonly usersService: UsersService,
+```
+
+- jwt.middleware.ts에서 JwtMiddleware에 users.service.ts가 필요하기 때문에 UsersService를 넣어준다.
+- Error: Nest can't resolve dependencies of the UsersService (UserRepository, JwtService, ?). Please make sure that the argument Object at index [2] is available in the UsersModule context. UsersService를 못 찾는 다는 에러와 함께 많은 에러가 발생한다.
+
+```
+      exports: [JwtService],
+```
+
+- jwt.middleware.ts에서 JwtService는 jwt.module.ts에서 module에 의해 export되고, global이기 때문에 쉽게 찾을 수 있다.
+
+- jwt.middleware.ts에서 UsersService는 누가 가지고 있을까?
+- users.module.ts에서 UsersModule을 가지고 있다.
+- 하지만 users.module.ts에서 UsersService은 export 되고 있지 않다.
+
+```
+exports: [UsersService],
+```
+
+- users.module.ts에서 UsersService를 exports해준다.
+- UsersService를 exports 되지 않았기 때문에 사용할 수 없었다.
+
+```
+async use(req: Request, res: Response, next: NextFunction) {
+    if ('x-jwt' in req.headers) {
+      const token = req.headers['x-jwt'];
+      const decoded = this.jwtService.verify(token.toString());
+      if (typeof decoded === 'object' && decoded.hasOwnProperty('id')) {
+        // console.log(decoded.id);
+        try {
+          const user = await this.usersService.findById(decoded['id']);
+          console.log(user);
+        } catch {}
+      }
+    }
+    next();
+  }
+```
+
+- jwt.middleware.ts에서 console.log(decoded.id) 대신에 try/catch, async/await 해준다.
+- findById는 users.service.ts에 있는 함수(function)이다.
+- findOne은 typeorm을 import 해서 제공되는 함수(function)이다.
+- console.log(user)로 출력한다.
+
+```
+{
+  me{
+    email
+  }
+}
+```
+
+```
+User {
+  id: 0,
+  createdAt: 2022-01-12T12:27:09.403Z,
+  updatedAt: 2022-01-12T12:27:09.403Z,
+  email: 'kim@kim.com',
+  password: '$2b$~~~blablabla',
+  role: 0
+}
+```
+
+- localhost:3000/graphql을 확인해보면 User 값이 콘솔로 출력되는 것을 확인할 수 있다.
+
+```
+if ('x-jwt' in req.headers) {
+      const token = req.headers['x-jwt'];
+      const decoded = this.jwtService.verify(token.toString());
+```
+
+- header
+
+```
+    private readonly jwtService: JwtService,
+    private readonly usersService: UsersService,
+```
+
+- DI(depency injection)
+- Middleware에서 header, DI(depency injection)를 이용해 User를 찾을 수 있다.
+
+```
+async use(req: Request, res: Response, next: NextFunction) {
+    if ('x-jwt' in req.headers) {
+      const token = req.headers['x-jwt'];
+      const decoded = this.jwtService.verify(token.toString());
+      if (typeof decoded === 'object' && decoded.hasOwnProperty('id')) {
+        try {
+          const user = await this.usersService.findById(decoded['id']);
+          console.log(user); // delete
+          req['user'] = user;
+        } catch (e) {}
+      }
+    }
+    // next()를 호출하면 next handler가 request user를 받는다.
+    next();
+  }
+```
+
+- console.log(user)를 지워주고, 사용자(user)에게 요청(request)한다.
+- 5.8에서는 next()를 호출하면 next handler가 request user를 받는다.
