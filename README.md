@@ -3712,11 +3712,10 @@ import { JwtMiddleware } from './jwt/jwt.middleware';
 app.use(JwtMiddleware);
 ```
 
-- src/app.module.ts:18:10 - error TS2724: '"./jwt/jwt.middleware"' has no exported member named 'jwtMiddleware'. Did you mean 'JwtMiddleware'? 에러가 발생한다.
+- src/app.module.ts:18:10 - error TS2724: '"./jwt/jwt.middleware"' has no exported member named 'jwtMiddleware'. Did you mean 'JwtMiddleware'? main.ts에서 에러가 발생한다.
 
 ```
 import { jwtMiddleware } from './jwt/jwt.middleware';
-
 ```
 
 - app.module.ts에서 위의 코드를 삭제해준다.
@@ -3751,8 +3750,6 @@ bootstrap();
 - main.ts에서 app.use(JwtMiddleware) 삭제한다.
 - functional middleware은 middleware를 어디서든 사용할 수 있고, class middleware는 app.module.ts Appmodule에서 implements NestModule 해주고, 설정 해야 한다.
 
--
-
 ```
 export class JwtMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
@@ -3780,8 +3777,8 @@ export class JwtMiddleware implements NestMiddleware {
  const token = req.headers['x-jwt'];
 ```
 
+- jwt.middleware.ts에서 console.log(req.headers['x-jwt'])를 const token = req.headers['x-jwt'];로 변경한다.
 - jwt.middleware.ts에서 토큰(token)을 저장(save)한다.
-
 - jwt.middleware.ts에서 토큰(token)을 검증(verify), 해독(decrpt)한다.
 - https://www.npmjs.com/package/jsonwebtoken (jwt.verify(token, secretOrPublicKey, [options, callback]), jwt.decode(token [, options]) 검색)
 - verify()를 이용해 올바른 토큰인지 확인하고, verify()는 해독(decrpt)된 token을 준다.
@@ -3802,7 +3799,7 @@ export class JwtService {
 }
 ```
 
-- jwt.service.ts에서 jwt.verify에 token, secretOrPublicKey는 this.options.privateKey를 준다. sign() 안에 { id: userId }는 userId + ''로 string type으로 만들어줄 수 있지만, object {} type로 그대로 둔다.
+- jwt.service.ts에서 jwt.verify에 token, secretOrPublicKey는 this.options.privateKey를 준다. sign() 안에 { id: userId }는 userId + ''로 string type으로 만들어줄 수 있지만, object type{}으로 그대로 둔다.
 
 - jwt.service.ts에서 verify(token: string, secretOrPublicKey: jwt.Secret, options?: jwt.VerifyOptions): jwt.JwtPayload (+4 overloads)라고 되어 있는데 강의에서 보면 string | object를 반환한다고 나와있다. 왜 jwt.JwtPayload를 반환하게 되어 있을까?
 
@@ -3821,7 +3818,7 @@ jti?: string | undefined;
 
 ```
 
-- JwtPayload를 봐도 string | object 가 없다. why? 확장 프로그램이 없나? 아니면 jsonwebtoken 버전 업데이트 되어서 바뀐 것 같다.
+- JwtPayload를 봐도 string | object 가 없다. why? vscode 확장 프로그램이 없나? 아니면 jsonwebtoken 버전 업데이트 되어서 바뀐 것 같다.
 
 - string | object 반환하니까 jwt.middleware.ts에서 확인한다.
 
@@ -3851,6 +3848,12 @@ export class JwtMiddleware implements NestMiddleware {
 - jwt.middleware.ts에서 token은 const token: string | string[]인 이유는 타입스크립트는 어떤 header나 array가 될 수 있기 때문이다.
 
 ```
+ constructor(private readonly jwtService: JwtService) {}
+```
+
+- Injectable일 때만 inject 할 수 있다.
+
+```
       const decoded = this.jwtService.verify(token.toString());
 ```
 
@@ -3876,7 +3879,7 @@ export class JwtMiddleware implements NestMiddleware {
 }
 ```
 
-- localhost:3000/graphql에서 실행해보면 "message": "Cannot return null for non-nullable field Query.me." 에러가 발생하지만, console에는 0이라는 id 값이 보인다.
+- localhost:3000/graphql에서 실행해보면 "message": "Cannot return null for non-nullable field Query.me." 에러가 발생하지만, console에는 { 0 }, decoded.id로 출력하면 0이라는 id 값이 보인다.
 
 ```
   async findById(id: number): Promise<User> {
@@ -3896,17 +3899,16 @@ export class JwtMiddleware implements NestMiddleware {
 - Error: Nest can't resolve dependencies of the UsersService (UserRepository, JwtService, ?). Please make sure that the argument Object at index [2] is available in the UsersModule context. UsersService를 못 찾는 다는 에러와 함께 많은 에러가 발생한다.
 
 ```
-      exports: [JwtService],
+      exports: [JwtService] // don't put this
 ```
 
 - jwt.middleware.ts에서 JwtService는 jwt.module.ts에서 module에 의해 export되고, global이기 때문에 쉽게 찾을 수 있다.
-
 - jwt.middleware.ts에서 UsersService는 누가 가지고 있을까?
 - users.module.ts에서 UsersModule을 가지고 있다.
 - 하지만 users.module.ts에서 UsersService은 export 되고 있지 않다.
 
 ```
-exports: [UsersService],
+exports: [UsersService], // put this
 ```
 
 - users.module.ts에서 UsersService를 exports해준다.
@@ -3922,7 +3924,7 @@ async use(req: Request, res: Response, next: NextFunction) {
         try {
           const user = await this.usersService.findById(decoded['id']);
           console.log(user);
-        } catch {}
+        } catch (e) {}
       }
     }
     next();
@@ -3991,3 +3993,9 @@ async use(req: Request, res: Response, next: NextFunction) {
 
 - console.log(user)를 지워주고, 사용자(user)에게 요청(request)한다.
 - 5.8에서는 next()를 호출하면 next handler가 request user를 받는다.
+
+# Git
+
+- git #5.8로 해서 #5.7로 이름 변경하려고 했는데 reset HEAD 명령어로 삭제해버렸다. 다시 reflog로 복구했다.
+- git reflog -> git checkout c41b39 -> git branch backup -> git checkout backup
+- https://velog.io/@sonypark/reset-hard%EB%A1%9C-%EC%82%AD%EC%A0%9C%ED%95%9C-%EC%BB%A4%EB%B0%8B-git-reflog%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%B4-%EC%82%B4%EB%A6%AC%EA%B8%B0 (reset --hard로 삭제한 커밋 git reflog 검색)
