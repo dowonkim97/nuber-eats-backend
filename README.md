@@ -4019,7 +4019,7 @@ import { ApolloServerBase } from 'apollo-server-core';
 - app.module.ts에서 GraphQLModule에서 'apollo-server-core'에서 모든 것을 가져와 사용할 수 있다.
 - https://github.com/apollographql/apollo-server (apollographql 검색)
 - Context A request context is available for each request
-  context는 각 요청(request)에서 context를 사용할 수 있습니다.
+  context는 각 request(req)에서 context를 사용할 수 있습니다.
 - context is defined as a function, it will be called on each request and will receive an object containing a req property, which represents the request itself.
   context가 함수로 정의되면 매 request마다 호출된다. 이것은 req property를 포함한 object를 Express로부터 받는다.
 
@@ -4047,13 +4047,13 @@ new ApolloServer({
 
 - context에 property를 넣으면 resolver 내부에서도 사용할 수 있다.
 - apollo server, graphql은 context를 가지고 있다.
-- 어떤 context를 지정해도 rosolver에서 확인할 수 있다.
+- 어떤 context를 지정해도 resolver에서 확인할 수 있다.
 
 ```
           req['user'] = user;
 ```
 
-- user는 req라는 request property가 있기 때문에 모든 resolver에서 공유가능하다.
+- user는 req라는 request property가 있기 때문에 모든 resolver에서 공유 가능하다.
 
 ```
   context: async ({ req }) => {
@@ -4078,7 +4078,7 @@ new ApolloServer({
       context: ({ req }) => ({user: req['user']})
 ```
 
-- jwt.middleware.ts에서 context를 다음과 같이 지정할 수 있다. req는 이미 user를 가지고 있다.
+- app.module.ts에서 context를 다음과 같이 지정할 수 있다. req는 이미 user를 가지고 있다.
 - req['user']를 graphql resolver의 context로 공유한다.
 
 ```
@@ -4106,7 +4106,7 @@ new ApolloServer({
     createdAt: 2022-01-12T12:27:09.403Z,
     updatedAt: 2022-01-12T12:27:09.403Z,
     email: 'kim@kim.com',
-    password: '$2b$10$MCEPUUyNdNukfMt8LlGbvOgx8xnexX83sxTkqCb8RLOQXCn7jSCcy',
+    password: '$2b$~~~~blabla',
     role: 0
   },
 ```
@@ -4119,7 +4119,7 @@ new ApolloServer({
       // ALL -> POST
 ```
 
-- http://localhost:3000/graphql에서 headers로 token을 보내고, 보낸 token은 request로 보낸다. 보낸 request는 app.module.ts 위 코드에서 멈추고, JwtMiddleware가 먼저 받는다.
+- http://localhost:3000/graphql에서 headers로 token을 보내고, 보낸 token은 request로 보낸다. 보낸 request는 app.module.ts 위 코드에서 멈추고, JwtMiddleware가 먼저 받는다. ALL -> POST로 변경한다.
 
 ```
           req['user'] = user;
@@ -4175,7 +4175,7 @@ else {
     }
 ```
 
--user가 있다면 에러를 보여준다.
+- user가 있다면 에러를 보여준다.
 
 - 이렇게 하는 건 별로기 때문에 모든 resolver에다 구현하지 않는다. 그렇기 때문에 guard라는 방패같은 concept가 있는데 request를 멈추게 한다.
 - https://docs.nestjs.kr/guards (nestjs guards 검색)
