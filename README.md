@@ -3999,3 +3999,6 @@ async use(req: Request, res: Response, next: NextFunction) {
 - git #5.8로 해서 #5.7로 이름 변경하려고 했는데 reset HEAD 명령어로 삭제해버렸다. 다시 reflog로 복구했다.
 - git reflog -> git checkout c41b39 -> git branch backup -> git checkout backup
 - https://velog.io/@sonypark/reset-hard%EB%A1%9C-%EC%82%AD%EC%A0%9C%ED%95%9C-%EC%BB%A4%EB%B0%8B-git-reflog%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%B4-%EC%82%B4%EB%A6%AC%EA%B8%B0 (reset --hard로 삭제한 커밋 git reflog 검색)
+- git checkout master -> #5.8 cherry pick up -> git merge backup
+  https://mongyang.tistory.com/m/174 (git merge 검색)
+- master로 가서 5.8 코드를 가져오고, backup에서 readme.md를 master와 merge해서 master로 통합했다.
