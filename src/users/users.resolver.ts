@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, Context } from '@nestjs/graphql';
 import {
   createAccountInput,
   createAccountOutput,
@@ -59,6 +59,16 @@ export class UsersResolver {
     }
   }
   @Query((returns) => User)
-  me() {}
+  // 매번 request 마다 context 받는다.
+  me(@Context() context) {
+    // console.log(context);
+    // user가 없으면 넘어간다.
+    if (!context.user) {
+      return;
+      // user가 있다면 에러를 보여준다.
+    } else {
+      return context.user;
+    }
+  }
 }
 // JWT를 만들고 user에게 준다(give).
