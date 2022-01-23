@@ -4006,7 +4006,7 @@ async use(req: Request, res: Response, next: NextFunction) {
 # 5.8
 
 ```
-          req['user'] = user;
+  req['user'] = user;
 ```
 
 - 인증(authentication) 부분에서 jwt.middleware.ts에서 위 코드를 graphql로 request를 공유하게 해야 한다.
@@ -4226,12 +4226,24 @@ export class AuthGaurd implements CanActivate {
 - guard를 어디서 사용하든, false를 return하기 때문에 request를 막는다.
 
 ```
+  me(@Context() context) {
+    if (!context.user) {
+      return;
+    } else {
+      return context.user;
+    }
+  }
+```
+
+- users.resolver.ts에서 위 코드를 지워준다.
+
+```
   @Query((returns) => User)
   @UseGuards(AuthGaurd)
   me() {}
 ```
 
-- users.resolver.ts에서 guard를 사용할 때 @UseGuards()와 안에는 AuthGaurd를 import 넣어준다.
+- users.resolver.ts에서 guard를 사용할 때 @UseGuards()와 안에는 AuthGaurd를 import해서 넣어준다.
 
 ```
 {
@@ -4243,7 +4255,7 @@ export class AuthGaurd implements CanActivate {
 
 - localhost:3000/graphql에서 auth.guard.ts에서 console.log()로 context를 확인하고 false를 return하는지 본다.
 - "message": "Forbidden resource",에러 메세지가 발생한다. reslover로 잘 전송되는 것과 false를 return하는 것을 알 수 있고 console로 출력이 된다.
-- authorization으로 추가하는 게 끝났다.
+- authorization(auth)으로 추가하는 게 끝났다.
 
 ```
     return true;
@@ -4270,8 +4282,7 @@ export class AuthGaurd implements CanActivate {
 ```
 
 - 위의 token 값을 입력해주면 위의 값이 뜨는 것을 볼 수 있다.
-- context가 http로 되어 있기 때문에
-  graphql로 바꿔야 한다.
+- context가 http로 되어 있기 때문에 graphql로 바꿔야 한다.
 
 ```
     const gqlContext = GqlExecutionContext.create(context).getContext();
@@ -4304,6 +4315,8 @@ export class AuthGaurd implements CanActivate {
 - 그리고 user를 다시 가져올 수 있게 되었다.
 
 ```
+    const gqlContext = GqlExecutionContext.create(context).getContext();
+    console.log(gqlContext); // delete
     const user = gqlContext['user'];
     console.log(user);
 ```
@@ -4332,7 +4345,8 @@ User {
 ```
 
 - user가 없으면 false로 출력하고 있으면 true로 출력한다. 이렇게 gaurd를 만든다.
-- 에러 메세지 "message": "Cannot return null for non-nullable field Query.me."가 나오지만, user가 인증(authentication)되었는지 확인해본다.
+- 에러 메세지 "message": "Cannot return null for non-nullable field Query.me."가 정상적으로 나온다.
+- user가 인증(authentication)되었는지 확인해본다.
 
 ```
   @Query((returns) => User)
@@ -4357,19 +4371,18 @@ User {
   @UseGuards(AuthGaurd)
 ```
 
-- guard를 이용하면 어떤 end point( 소프트웨어나 제품에 최종목적지인 사용자)를 보호할 수 있다.
+- guard를 이용하면 어떤 end point(소프트웨어나 제품에 최종목적지인 사용자)를 보호할 수 있다.
 - https://securitycream.tistory.com/7 (end point 검색)
 - guard 말고도 user를 허용(authorize)하는 더 좋은 방법이 있다고 한다.
-- 인증(authentication)은 누가 resorce를 요청하는 지 확인하는(knowing) 과정이다. token으로 identity(신원)을 확인한다.
-- 허가(authorization)은 user가 무슨 일을 하기 전 허가(permission)을 가지고 있는지 확인하는 과정이다.
+- 인증(authentication)은 누가 resource를 요청하는 지 확인하는(knowing) 과정이다. token으로 identity(신원)을 확인한다.
+- 허가(authorization)은 user가 무슨 일을 하기 전 permission을 가지고 있는지 확인하는 과정이다.
 - 허가(authorization)은 예를 들어 user.entity.ts에서 User에 Client, Owner, Delivery 등 다른 Role들이 있다. Client는 많은 일을 할 수 있고, Owner은 레스토랑(resturant) module을 만들고, Delivery는 레스토랑(resturant) module을 만들지 않는다.
 
 ```
   @UseGuards(AuthGaurd)
-
 ```
 
-- 허가(authorization)을 구현할 때는 gaurd 보다 좋게 users.resolver.ts 위 코드랑 비슷하게 한다.
+- 허가(authorization)를 구현할 때는 gaurd 보다 좋게 users.resolver.ts 위 코드랑 비슷하게 한다.
 
 ```
  async login(@Args('input') loginInput: LoginInput): Promise<LoginOutput> {
@@ -4394,4 +4407,4 @@ User {
 - 위 코드는 AuthGaurd를 LoginOnlyGuard라고 부를 수도 있다.
 - 이런식으로 user가 로그인 유무 guard와 user가 인증 유무 guard랑 따로 따로 만들어서 확인할 수 있는 것 같다.
 - restaurant를 다룰 때 누가 client이고, Delivery person, restaurant Owner인지 알아야 할 때 guard를 다시 사용한다.
-- 위 코드 하나로 resolver를 보호한다.
+- users.resolver.ts에서 위 코드 하나로 resolver를 보호하기 때문에 guard가 좋은 기능인 것 같다.
