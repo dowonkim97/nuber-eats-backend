@@ -1,4 +1,6 @@
+import { UseGuards } from '@nestjs/common';
 import { Resolver, Query, Mutation, Args, Context } from '@nestjs/graphql';
+import { AuthGaurd } from 'src/auth/auth.guard';
 import {
   createAccountInput,
   createAccountOutput,
@@ -58,7 +60,7 @@ export class UsersResolver {
       };
     }
   }
-  @Query((returns) => User)
+  /*
   // 매번 request 마다 context 받는다.
   me(@Context() context) {
     // console.log(context);
@@ -70,5 +72,10 @@ export class UsersResolver {
       return context.user;
     }
   }
+  */
+  @Query((returns) => User)
+  @UseGuards(AuthGaurd)
+  me() {}
 }
+
 // JWT를 만들고 user에게 준다(give).

@@ -4180,3 +4180,218 @@ else {
 - 이렇게 하는 건 별로기 때문에 모든 resolver에다 구현하지 않는다. 그렇기 때문에 guard라는 방패같은 concept가 있는데 request를 멈추게 한다.
 - https://docs.nestjs.kr/guards (nestjs guards 검색)
 - https://jakekwak.gitbook.io/nestjs/overview/guards (nestjs 한국어 guards)
+
+# 5.9
+
+- authorization module을 만든다.
+- nest g mo auth (vscode 터미널)
+
+```
+imports: [
+   CommonModule,
+  ],
+```
+
+- jwt 모듈은 이제 변경할 필요 없고, app.module.ts CommonModule도 필요 없을 것 같기 때문에 imports에서 지운다.
+- auth module에서 guard를 만든다.
+- auth 폴더에서 auth.guard.ts파일을 만든다.
+- guard는 function인데 request를 다음 단계로 진행할지 말지 결정한다.
+- @Injectable()을 사용하여 middleware처럼 guard를 만든다.
+
+```
+import { CanActivate, Injectable } from '@nestjs/common';
+
+@Injectable()
+export class AuthGaurd implements CanActivate {}
+
+```
+
+- CanActivate는 ture를 return하면 request로 진행하고, false로 return하면 request를 멈추게 한다.
+
+- CanActivate는 canActivate function 하나 밖에 없다
+- CanActivate는 ExecutionContext를 주는데, request의 context에 접근하게 해준다.
+- the current request pipeline. graphql의 context가 아니라 현재의(current) pipeline의 context를 연결할 수 있게 해준다. 즉, request의 context이다.
+
+```
+@Injectable()
+export class AuthGaurd implements CanActivate {
+  canActivate(context: ExecutionContext) {
+    console.log(context);
+    return false;
+  }
+}
+
+```
+
+- guard를 어디서 사용하든, false를 return하기 때문에 request를 막는다.
+
+```
+  @Query((returns) => User)
+  @UseGuards(AuthGaurd)
+  me() {}
+```
+
+- users.resolver.ts에서 guard를 사용할 때 @UseGuards()와 안에는 AuthGaurd를 import 넣어준다.
+
+```
+{
+  me {
+    email
+  }
+}
+```
+
+- localhost:3000/graphql에서 auth.guard.ts에서 console.log()로 context를 확인하고 false를 return하는지 본다.
+- "message": "Forbidden resource",에러 메세지가 발생한다. reslover로 잘 전송되는 것과 false를 return하는 것을 알 수 있고 console로 출력이 된다.
+- authorization으로 추가하는 게 끝났다.
+
+```
+    return true;
+```
+
+- "message": "Cannot return null for non-nullable field Query.me." 에러메세지가 나온다.
+- auth.guard.ts에서 true로 return하면 다음 단계로 진행 할 수 있다.
+
+```
+  { user: undefined, req: [IncomingMessage] },
+```
+
+- console 값에 user가 undefined으로 뜨는 것을 볼 수 있다.
+  이건 HTTP headers에 localhost에 x-jwt token 값을 입력해주지 않아서 뜨지 않았다.
+
+```
+{
+  "x-jwt": "eyJh~~~ blablabla"
+}
+```
+
+```
+    { user: [User], req: [IncomingMessage] },
+```
+
+- 위의 token 값을 입력해주면 위의 값이 뜨는 것을 볼 수 있다.
+- context가 http로 되어 있기 때문에
+  graphql로 바꿔야 한다.
+
+```
+    const gqlContext = GqlExecutionContext.create(context).getContext();
+    console.log(gqlContext);
+```
+
+- auth.guard.ts에서 gqlContext를 변수로 선언하고, GqlExecutionContext, create안에는 params로 context 넘겨주고, getContext()를 호출한다. 그리고 console.log로 gqlContext 변수를 출력한다.
+
+```
+{
+  me {
+    email
+  }
+}
+```
+
+```
+{
+  user: User {
+    id: 0,
+    createdAt: 2022-01-12T12:27:09.403Z,
+    updatedAt: 2022-01-12T12:27:09.403Z,
+    email: 'kim@kim.com',
+    password: '$2b$~blabla',
+    role: 0
+  },
+```
+
+- localhost:3000/graphql로 출력시키면 graphql context를 볼 수 있다.
+- 그리고 user를 다시 가져올 수 있게 되었다.
+
+```
+    const user = gqlContext['user'];
+    console.log(user);
+```
+
+- 가져온 user를 console.log로 출력해본다.
+
+```
+User {
+  id: 0,
+  createdAt: 2022-01-12T12:27:09.403Z,
+  updatedAt: 2022-01-12T12:27:09.403Z,
+  email: 'kim@kim.com',
+  password: '$2b$1~~~blabla',
+  role: 0
+}
+```
+
+- user 안에 User 정보만 출력되는 것을 볼 수 있다.
+
+```
+    const user = gqlContext['user'];
+    console.log(user); // delete
+    if (!user) {
+      return false;
+    }
+```
+
+- user가 없으면 false로 출력하고 있으면 true로 출력한다. 이렇게 gaurd를 만든다.
+- 에러 메세지 "message": "Cannot return null for non-nullable field Query.me."가 나오지만, user가 인증(authentication)되었는지 확인해본다.
+
+```
+  @Query((returns) => User)
+  @UseGuards(AuthGaurd)
+  me() {}
+```
+
+- 에러메세지로 유추해봤을 때, me()까지는 동작한다는 뜻이다.
+
+```
+{
+  me {
+    email
+  }
+}
+```
+
+- 구글 시크릿 모드로 localhost:3000/graphql를 열고, 위 코드를 입력해주면,
+  "message": "Forbidden resource"라는 에러메시지가 나온다.
+
+```
+  @UseGuards(AuthGaurd)
+```
+
+- guard를 이용하면 어떤 end point( 소프트웨어나 제품에 최종목적지인 사용자)를 보호할 수 있다.
+- https://securitycream.tistory.com/7 (end point 검색)
+- guard 말고도 user를 허용(authorize)하는 더 좋은 방법이 있다고 한다.
+- 인증(authentication)은 누가 resorce를 요청하는 지 확인하는(knowing) 과정이다. token으로 identity(신원)을 확인한다.
+- 허가(authorization)은 user가 무슨 일을 하기 전 허가(permission)을 가지고 있는지 확인하는 과정이다.
+- 허가(authorization)은 예를 들어 user.entity.ts에서 User에 Client, Owner, Delivery 등 다른 Role들이 있다. Client는 많은 일을 할 수 있고, Owner은 레스토랑(resturant) module을 만들고, Delivery는 레스토랑(resturant) module을 만들지 않는다.
+
+```
+  @UseGuards(AuthGaurd)
+
+```
+
+- 허가(authorization)을 구현할 때는 gaurd 보다 좋게 users.resolver.ts 위 코드랑 비슷하게 한다.
+
+```
+ async login(@Args('input') loginInput: LoginInput): Promise<LoginOutput> {
+    try {
+      return await this.usersService.login(loginInput);
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
+  }
+```
+
+- Gaurd도 각기 다른 기능을 하는 Gaurd를 만들 수 있어서 좋다.
+- 위 코드와 같이 loginGaurd라는 user가 인증(authentication)이 되었는지 아닌지 확인할 수 있는 publicOnly 같은 guard를 만들 수 있다.
+
+```
+  @UseGuards(AuthGaurd)
+```
+
+- 위 코드는 AuthGaurd를 LoginOnlyGuard라고 부를 수도 있다.
+- 이런식으로 user가 로그인 유무 guard와 user가 인증 유무 guard랑 따로 따로 만들어서 확인할 수 있는 것 같다.
+- restaurant를 다룰 때 누가 client이고, Delivery person, restaurant Owner인지 알아야 할 때 guard를 다시 사용한다.
+- 위 코드 하나로 resolver를 보호한다.
