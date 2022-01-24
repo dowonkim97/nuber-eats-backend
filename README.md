@@ -4427,9 +4427,11 @@ User {
 
 ```
 export const AuthUser = createParamDecorator(
-    (data: unknown, ctx: ExecutionContext) => {
+    (data: unknown, context: ExecutionContext) => {
+    console.log(context); // delete
     const gqlContext = GqlExecutionContext.create(context).getContext();
     const user = gqlContext['user'];
+    console.log(authUser) // delete
     return user;
     }
 );
@@ -4437,6 +4439,15 @@ export const AuthUser = createParamDecorator(
 
 - createParamDecorator은 factory()은 data: unknown, context: ExecutionContext가 필요하다.
 
+```
+{
+  me {
+    email
+  }
+}
+```
+
+- localhost:3000/graphql로 console.log(context)로 context를 콘솔로 찍어본다.
 - auth.guard.ts guard에 GqlExecutionContext, user가 있기 때문에 const gqlContext, const user를 users.resolver.ts에 넣고, user를 찾고, user에서 찾은 것을 return한다.
 
 ```
