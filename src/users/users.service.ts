@@ -14,7 +14,7 @@ export class UsersService {
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly jwtService: JwtService,
   ) {}
-
+  // create account
   async createAccount({
     email,
     password,
@@ -39,7 +39,7 @@ export class UsersService {
       return { ok: false, error: '계정을 생성할 수 없습니다.' };
     }
   }
-
+  // login
   async login({
     email,
     password,

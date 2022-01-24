@@ -1,5 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Query, Mutation, Args, Context } from '@nestjs/graphql';
+import { AuthUser } from 'src/auth/auth-user.decorator';
 import { AuthGaurd } from 'src/auth/auth.guard';
 import {
   createAccountInput,
@@ -73,9 +74,13 @@ export class UsersResolver {
     }
   }
   */
+  // me Query로 see my profile
   @Query((returns) => User)
   @UseGuards(AuthGaurd)
-  me() {}
+  me(@AuthUser() authUser: User) {
+    return authUser;
+  }
+  // me(), resolver에서 request를 보내고 있는 주체를 알아야 한다.
 }
 
 // JWT를 만들고 user에게 준다(give).

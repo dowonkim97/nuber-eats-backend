@@ -4408,3 +4408,90 @@ User {
 - 이런식으로 user가 로그인 유무 guard와 user가 인증 유무 guard랑 따로 따로 만들어서 확인할 수 있는 것 같다.
 - restaurant를 다룰 때 누가 client이고, Delivery person, restaurant Owner인지 알아야 할 때 guard를 다시 사용한다.
 - users.resolver.ts에서 위 코드 하나로 resolver를 보호하기 때문에 guard가 좋은 기능인 것 같다.
+
+# #5.10
+
+```
+  me() {}
+```
+
+- users.resolver.ts에서 login이 되어 있지 않으면 request를 멈추게 한다.
+- me(), resolver에서 request를 보내고 있는 주체를 알아야 한다.
+
+```
+ @Args('input')
+```
+
+- request를 누가 보내고 있는지 알기 위해서 users.resolver.ts에서 위의 Argument를 위한 decorator(@)처럼 User를 위한 decorator(@)를 직접 만든다.
+- auth 폴더에 auth-user.decorator.ts파일을 만든다.
+
+```
+export const AuthUser = createParamDecorator(
+    (data: unknown, ctx: ExecutionContext) => {
+    const gqlContext = GqlExecutionContext.create(context).getContext();
+    const user = gqlContext['user'];
+    return user;
+    }
+);
+```
+
+- createParamDecorator은 factory()은 data: unknown, context: ExecutionContext가 필요하다.
+
+- auth.guard.ts guard에 GqlExecutionContext, user가 있기 때문에 const gqlContext, const user를 users.resolver.ts에 넣고, user를 찾고, user에서 찾은 것을 return한다.
+
+```
+  me(@AuthUser() authUser: User) {
+    console.log(authUser)
+  }
+```
+
+- users.resolver.ts에서 @AuthUser를 import 해준다. authUser는 type이 User를 return 해준다. authUser를 console에 출력한다.
+
+```
+{
+  me {
+    email
+  }
+}
+```
+
+- localhost:3000/graphql에서 console에서 User를 확인하면 정상적으로 값이 나오는 것을 확인할 수 있다.
+
+```
+  me(@AuthUser() authUser: User) {
+    console.log(authUser) // delete
+    return authUser;
+  }
+```
+
+- return authUser를 해준다.
+
+```
+{
+  me {
+    email
+  }
+}
+```
+
+```
+{
+  "data": {
+    "me": {
+      "email": "kim@kim.com"
+    }
+  }
+}
+```
+
+- localhost:3000/graphql에서 data로 값이 출력되는 것을 확인 할 수 있다.
+
+```
+  me(@AuthUser() authUser: User) {
+    return authUser;
+  }
+```
+
+- auth-user.decorator.ts로 어떤 것을 return 하여도 users.resolver.ts에서 authUser로 받아질 수 있다. authUser은 어떤 이름이나 지을 수 있다.
+
+- 허가(authorization)는 예를 들어 delivery guy인 경우에만 혹은 restaurant owner인 경우에 특정 resolver를 보여주는 식으로 할 수 있다. 이 때 metadata를 사용한다.
