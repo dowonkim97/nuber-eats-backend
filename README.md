@@ -4540,7 +4540,7 @@ export const AuthUser = createParamDecorator(
 - db에서 user를 찾으면 user를 request object에 붙여서 보낸다.
 - middleware가 원하는대로 request object를 바꿀 수 있다.
 - middleware에 의해 바뀐 request object를 모든 resolver에서 사용할 수 있다.
-- token이 없거나 에러가 있으면, user를 token으로 찾을 수 없다면 req에 어떤 것도 붙이지 않았다.
+- token이 없거나 에러가 있거나, user를 token으로 찾을 수 없다면 request에 어떤 것도 붙이지 않았다.
 
 ```
    const decoded = this.jwtService.verify(token.toString());
@@ -4566,22 +4566,23 @@ export const AuthUser = createParamDecorator(
     }
 ```
 
-- try/catch 구문을 decoded 안에 넣어줬어야 한다.
+- try/catch 구문을 decoded 밖에 넣어줬어야 한다.
 - 그래야 http://localhost:3000에서 "message": "Forbidden resource"라는 원하는 값을 보여준다.
 
 ```
-          req['user'] = user;
+  req['user'] = user;
 
 ```
 
-- decoding에 실패하면 request에 아무것도 안 붙인다. try 안에 decoded가 있기 때문이다.
+- decoding에 실패하면 request(req)에 아무것도 안 붙인다.
+- try 안에 decoded가 있기 때문이다.
 
 ```
-      context: ({ req }) => ({ user: req['user'] }),
+  context: ({ req }) => ({ user: req['user'] }),
 ```
 
 - app.module.ts에서 context는 apollo, graphql server의 context는 모든 resolver에 정보를 보낼 수 있는 프로퍼티(property)이다. context 모든 request를 가져오고 호출한다. {req}는 user key['user']를 가진 http에 해당한다.
-- context function을 만들면 function이 req object를 준다. JwtMiddleware를 거치고, grapql context에 req['user']을 보낸다. context user로 본다.
+- context()을 만들면 function이 {req}를 준다. JwtMiddleware를 거치고, grapql context에 req['user']을 보낸다. context user로 본다.
 - users.resolver.ts를 보면 guard가 있는데, guard는 function을 보충해준다.
   auth.guard.ts를 보면 canActive가 있는데 boolean으로 false나 true를 return한다.
 
