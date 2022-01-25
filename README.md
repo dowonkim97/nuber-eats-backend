@@ -4506,3 +4506,114 @@ export const AuthUser = createParamDecorator(
 - auth-user.decorator.ts로 어떤 것을 return 하여도 users.resolver.ts에서 authUser로 받아질 수 있다. authUser은 어떤 이름이나 지을 수 있다.
 
 - 허가(authorization)는 예를 들어 delivery guy인 경우에만 혹은 restaurant owner인 경우에 특정 resolver를 보여주는 식으로 할 수 있다. 이 때 metadata를 사용한다.
+
+# #5.11
+
+- authentication은 x-jwt 같은 header은 token을 보내고 있다.
+- header은 http 기술을 쓰기 위해 middleware를 만든다.
+- jwt.middleware.ts middleware는 header을 가지고, jwt.service.ts에서 jwtService.verify()를 사용한다.
+
+```
+  (typeof decoded === 'object' && decoded.hasOwnProperty('id'))
+```
+
+- jwt.middleware.ts id를 찾게되면, userService를 사용한다.
+
+```
+  const user = await this.usersService.findById(decoded['id']);
+```
+
+- usersService를 사용해서 id를 가진 user를 찾는다.
+
+```
+  async findById(id: number): Promise<User> {
+    return this.users.findOne({ id });
+  }
+```
+
+- usersService는 typeorm의 findOne()를 사용하는 findById()를 가지고 있다.
+
+```
+  req['user'] = user
+```
+
+- db에서 user를 찾으면 user를 request object에 붙여서 보낸다.
+- middleware가 원하는대로 request object를 바꿀 수 있다.
+- middleware에 의해 바뀐 request object를 모든 resolver에서 사용할 수 있다.
+- token이 없거나 에러가 있으면, user를 token으로 찾을 수 없다면 req에 어떤 것도 붙이지 않았다.
+
+```
+   const decoded = this.jwtService.verify(token.toString());
+      if (typeof decoded === 'object' && decoded.hasOwnProperty('id')) {
+        try {
+          const user = await this.usersService.findById(decoded['id']);
+          req['user'] = user;
+        } catch (e) {}
+      }
+    }
+```
+
+- http://localhost:3000에서 header에 x-jwt안에 token을 제대로 붙이지 않았을 때, ERROR [ExceptionsHandler] invalid signature이라는 에러가 발생한다.
+
+```
+     try {
+        const decoded = this.jwtService.verify(token.toString());
+        if (typeof decoded === 'object' && decoded.hasOwnProperty('id')) {
+          const user = await this.usersService.findById(decoded['id']);
+          req['user'] = user;
+        }
+      } catch (e) {}
+    }
+```
+
+- try/catch 구문을 decoded 안에 넣어줬어야 한다.
+- 그래야 http://localhost:3000에서 "message": "Forbidden resource"라는 원하는 값을 보여준다.
+
+```
+          req['user'] = user;
+
+```
+
+- decoding에 실패하면 request에 아무것도 안 붙인다. try 안에 decoded가 있기 때문이다.
+
+```
+      context: ({ req }) => ({ user: req['user'] }),
+```
+
+- app.module.ts에서 context는 apollo, graphql server의 context는 모든 resolver에 정보를 보낼 수 있는 프로퍼티(property)이다. context 모든 request를 가져오고 호출한다. {req}는 user key['user']를 가진 http에 해당한다.
+- context function을 만들면 function이 req object를 준다. JwtMiddleware를 거치고, grapql context에 req['user']을 보낸다. context user로 본다.
+- users.resolver.ts를 보면 guard가 있는데, guard는 function을 보충해준다.
+  auth.guard.ts를 보면 canActive가 있는데 boolean으로 false나 true를 return한다.
+
+  ```
+    canActivate(context: ExecutionContext) {
+    const gqlContext = GqlExecutionContext.create(context).getContext();
+    const user = gqlContext['user'];
+  ```
+
+- context는 nestjs ExecutionContext이다. ExecutionContext를 가져다가 GqlExcutionContext로 바꿔야 한다.
+- graphql의 getContext가 있다. gqlContext는 context: ({ req }) => ({ user: req['user'] })와 같다.
+
+```
+    // context에서 user를 찾는다.
+    const user = gqlContext['user'];
+    // user가 있다면 true, 없다면 false
+    if (!user) {
+      return false;
+    }
+    return true;
+  }
+```
+
+- context에서 user를 찾는다. user가 있다면 true, 없다면 false로 return한다.
+
+- sending header token -> decrypt token -> verify middleware -> add user request object(req['user']) -> graphql context -> guard find gqlContext if user true or false return -> guard authorize -> users.resolver.ts graphql context-> auth-user.decorator.ts @AuthUser take context -> gqlContext -> user return
+
+```
+ me(@AuthUser() authUser: User) {
+    return authUser;
+  }
+```
+
+- users.resolver.ts에서 decorator는 value를 반환한다. value는 authUser, value type은 User이다.
+- 따라서 컨텍스트(context) 핸들러는 http 요청에서 요청(req) 객체를 가져와 사용자(user) 정보를 추출하고 이를 AuthGuard에서 처리할 컨텍스트(context) 객체에 제공한다.
