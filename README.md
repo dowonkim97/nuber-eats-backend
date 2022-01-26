@@ -4618,3 +4618,325 @@ export const AuthUser = createParamDecorator(
 
 - users.resolver.ts에서 decorator는 value를 반환한다. value는 authUser, value type은 User이다.
 - 따라서 컨텍스트(context) 핸들러는 http 요청에서 요청(req) 객체를 가져와 사용자(user) 정보를 추출하고 이를 AuthGuard에서 처리할 컨텍스트(context) 객체에 제공한다.
+
+# #5.12
+
+- 2개의 query를 추가해본다. query 하나, mutation 하나를 추가한다.
+
+```
+ @UseGuards(AuthGaurd) // end point를 보호한다.
+  @Query((returns) => User)
+  user(id) {
+    return;
+  }
+```
+
+- user의 profile을 볼 수 있는 query를 추가한다.
+- end point(소프트웨어나 제품에 최종목적지인 사용자)를 사용하여 보호한다.
+
+```
+loginInput: LoginInput): Promise<LoginOutput>
+```
+
+- 위와 같이 통일 되서 보기 좋게 input/output 형식으로 작성해본다.
+- users 폴더 안에 dtos 폴더 안에 user-profile.dto.ts파일을 만들어 준다.
+- user-profile.dto.ts파일은 create-account.dto.ts파일과 비슷하다.
+
+```
+@ArgsType()
+export class UserProfileInput {
+  @Field((type) => Number) // id는 Number로 한다.
+  userId: number;
+}
+```
+
+- user-profile.dto.ts파일에서 UserProfileInput 이름 짓고 다음과 같이 dto를 만들어준다.
+
+```
+  @UseGuards(AuthGaurd)
+  @Query((returns) => User)
+  userProfile(@Args() userProfileInput: UserProfileInput) {
+    return this.usersService.findById(userProfileInput.userId);
+  }
+```
+
+- users.resolver.ts에서 user(id)를 userProfile(@Args())로 변경해주고,
+  userProfileInput를 import, 추가해주고, type은 UserProfileInput로 해준다.
+- 나도 손가락 날라가며 코딩하고 싶다ㅋㅋ
+
+```
+  userProfile(@Args() userProfileInput: UserProfileInput) {
+    return this.usersService.findById(userProfileInput.userId);
+  }
+```
+
+- userProfileInput을 만들고 이제 return 해줘야 한다.
+- findById는 token을 위해 만든 function이다.
+- UserProfileInput에서 userId를 찾는다.
+
+```
+{
+  me {
+    id
+    email
+  }
+}
+```
+
+- localhost:3000/graphql에서 id를 찾아봤는데 "message": "Cannot query field \"id\" on type \"User\"." user에 id가 없다는 에러메세지가 나온다.
+
+```
+userProfile(
+userId: Float!
+): User!
+type User {
+email: String!
+password: String!
+role: UserRole!
+}
+```
+
+- user에는 email, password, role 밖에 없다.
+- common 폴더 안에 entities 폴더에서 core.entity.ts파일에 @ObjectType이 없어서 에러가 발생했다.
+
+```
+userProfile(
+userId: Float!
+): User!
+type User {
+id: Float!
+createdAt: DateTime!
+updatedAt: DateTime!
+email: String!
+password: String!
+role: UserRole!
+}
+```
+
+- 새로고침하면 id, createdAt, updatedAt 등 새로운 게 나온다.
+
+```
+{
+  "data": {
+    "me": {
+      "id": 0,
+      "email": "kim@kim.com"
+    }
+  }
+}
+```
+
+- 그리고 정상적으로 id 값과 email이 나오는 것을 확인할 수 있다. 안되면 만료된 토큰 일수도 있으니 다시 생성해서 넣어보자.
+
+```
+{
+  userProfile(userId:0) {
+    id
+    email
+  }
+}
+```
+
+```
+{
+  "data": {
+    "userProfile": {
+      "id": 0,
+      "email": "kim@kim.com"
+    }
+  }
+}
+```
+
+- 위의 것으로 해도 data가 정상적으로 출력되는 것을 확인할 수 있다.
+
+```
+{
+  userProfile(userId:1) {
+    id
+    email
+  }
+}
+```
+
+- id가 0 말고도 1,2 등 다른 것은 못 찾는다.
+- user인데 못찾는 것 일 수도 있기 때문에 에러를 handle 한다.
+
+```
+  async login(@Args('input') loginInput: LoginInput): Promise<LoginOutput> {
+```
+
+- 그렇기 때문에 users.resolver.ts에서 LoginOutput과 같이 output을 사용한다.
+
+```
+export class LoginOutput extends MutationOutput
+```
+
+- loginOutput은 MutationOutput을 extends 한 것과 같이 user-profile.dto.ts에도 적용한다.
+
+- login.dto.ts에서는 MutationOutput을 extends하면 error와 ok를 사용할 수 있다.
+- common 폴더 안 entities 폴더 안에 output.dto.ts파일에서 Mutation에서만 사용하는 것이 아니기 때문에 MutationOutput 보다는 CoreOutput로 이름을 변경한다.
+
+```
+export class LoginOutput extends CoreOutput
+```
+
+- users 폴더 안 dtos 폴더 안에 login.dto.ts에도 CoreOutput으로 변경해준다.
+
+```
+export class createAccountOutput extends CoreOutput {}
+```
+
+- users 폴더 안 dtos 폴더 안에 create-account.dto.ts에도 CoreOutput으로 변경해준다.
+- CoreOutput은 error, ok를 가지고 있다.
+
+```
+@ObjectType()
+export class UserProfileOutput extends CoreOutput {
+  @Field((type) => User)
+  user: User;
+}
+
+```
+
+- user-profile.dto.ts에서 @Field type을 User로, user는 type을 User로 가진다.
+
+```
+  @Query((returns) => UserProfileOutput)
+
+```
+
+- users.resolver.ts에서는 UserProfileOutput을 return하고 Promise는
+
+```
+  userProfile(
+    @Args() userProfileInput: UserProfileInput,
+  ): Promise<UserProfileOutput> {
+  }
+}
+```
+
+- users.resolver.ts에서 Promise는 UserProfileOutput으로 준다.
+
+```
+  async userProfile(
+    @Args() userProfileInput: UserProfileInput,
+  ): Promise<UserProfileOutput> {
+    try {
+      const user = await this.usersService.findById(userProfileInput.userId);
+    } catch (e) {
+      return {
+        error: 'User Not Found',
+        ok: false,
+      };
+    }
+  }
+```
+
+- 'user' 속성이 '{ error: string; ok: false; }' 형식에 없지만 'UserProfileOutput' 형식에서 필수입니다.ts(2741)
+  user-profile.dto.ts(14, 3): 여기서는 'user'이(가) 선언됩니다. 라는 빨간줄이 뜬다.
+
+  ```
+    @Field((type) => User, { nullable: true })
+    user?: User;
+  ```
+
+- user-profile.dto.ts에서 user에 nullable을 붙여준다.
+- 어떨 땐 user를 찾지만, 어떨 때는 못 찾기 때문이다~
+- { nullable: true }도 있지말고 써주기~
+- users.resolver.ts에서 user을 보면 findById users.service.ts로 이동 findOne을 보면 Entity | undefined이다.
+
+```
+    return {
+        ok: Boolean(user),
+        user,
+      };
+```
+
+- users.resolver.ts에서 (user)를 찾으면 ok가 true, undefined이면, false로 출력한다. 처음보는 신기한 형태다.
+
+```
+{
+  userProfile(userId:1) {
+    id
+    email
+  }
+}
+```
+
+- localhost:3000/graphql에 그대로 입력하면 "message": "Cannot query field \"id\" on type \"UserProfileOutput\".", UserProfileOutput type에 id field를 query 하지 못한다고 에러메세지가 나온다.
+
+```
+{
+  userProfile(userId:1) {
+    ok
+    error
+    user{
+      id
+    }
+  }
+}
+```
+
+- localhost:3000/graphql에 입력한다.
+
+```
+{
+  "data": {
+    "userProfile": {
+      "ok": false,
+      "error": null,
+      "user": null
+    }
+  }
+}
+```
+
+- 다음과 같은 데이터 값이 나온다.
+
+```
+    if (!user) {
+        throw Error();
+      }
+
+     return {
+        error: 'User Not Found',
+        ok: false,
+      };
+```
+
+```
+ // user 못 찾으면 return 쪽으로 보냄
+      if (!user) {
+        throw Error();
+      }
+      return {
+        ok: true,
+        user,
+      };
+    } catch (e) {
+      // user 못 찾으면 여기로 보냄
+      return {
+        error: 'User Not Found',
+        ok: false,
+      };
+    }
+```
+
+- user 못 찾으면 return 쪽으로 보내고, error 값이 출력된다.
+
+```
+{
+  "data": {
+    "userProfile": {
+      "ok": true,
+      "error": null,
+      "user": {
+        "id": 0
+      }
+    }
+  }
+}
+```
+
+- user 값은 id를 0을 보냈다. 잘못 보냈을 때는 "error": "User Not Found"가 출력되고 정상적으로 작동한다.

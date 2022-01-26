@@ -7,6 +7,7 @@ import {
   createAccountOutput,
 } from './dtos/create-account.dto';
 import { LoginInput, LoginOutput } from './dtos/login.dto';
+import { UserProfileInput, UserProfileOutput } from './dtos/user-profile.dto';
 import { User } from './entities/users.entity';
 import { UsersService } from './users.service';
 
@@ -77,10 +78,37 @@ export class UsersResolver {
   // me Query로 see my profile
   @Query((returns) => User)
   @UseGuards(AuthGaurd)
+  // me(), resolver에서 request를 보내고 있는 주체를 알아야 한다.
   me(@AuthUser() authUser: User) {
     return authUser;
   }
-  // me(), resolver에서 request를 보내고 있는 주체를 알아야 한다.
+
+  @UseGuards(AuthGaurd) // end point를 보호한다.
+  @Query((returns) => UserProfileOutput)
+  // user(id) change -> userProfile(@Args()), add UserProfileInput import type UserProfileInput
+  async userProfile(
+    @Args() userProfileInput: UserProfileInput,
+  ): Promise<UserProfileOutput> {
+    // findById는 token을 위해 만든 function이다.
+    // UserProfileInput에서 userId를 찾는다.
+    try {
+      const user = await this.usersService.findById(userProfileInput.userId);
+      // user 못 찾으면 return 쪽으로 보냄
+      if (!user) {
+        throw Error();
+      }
+      return {
+        ok: true,
+        user,
+      };
+    } catch (e) {
+      // user 못 찾으면 여기로 보냄
+      return {
+        error: 'User Not Found',
+        ok: false,
+      };
+    }
+  }
 }
 
 // JWT를 만들고 user에게 준다(give).
