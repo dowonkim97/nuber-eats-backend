@@ -4956,12 +4956,12 @@ export class UserProfileOutput extends CoreOutput {
 - users.resolver.ts에서 @UseGuards(AuthGaurd)를 가져오고 @Mutation 해주고 return을 해줘야 하는데 dto, MutationOutput, MutationInput이 없다.
 
 ```
+@ObjectType()
 export class EditProfileOutput extends CoreOutput {}
-
 ```
 
 - users 폴더 안에 dtos폴더에서 edit-profile.dto.ts파일을 만들어준다.
-- EditProfileOutput 이름 짓고 error, ok 넘겨주는 CoreOutput를 extends 해준다.
+- @ObjectType()를 넣어주고, EditProfileOutput 이름 짓고 error, ok 넘겨주는 CoreOutput를 extends 해준다.
 
 ```
   @UseGuards(AuthGaurd)
@@ -4978,14 +4978,25 @@ export class EditProfileOutput extends CoreOutput {}
 ```
 
 - editProfile이 dto를 만들기 위해서는 EditProfileInput이 필요하고, me에서 만든 것과 같이 AuthUser과 필요하다.
-- AuthUser은 현재 login한 사용자 정보를 준다.
+
+```
+  editProfile(
+    @AuthUser() authUser: User,
+  )
+}
+```
+
+- users.resolver.ts에서 editProfile 안에 @AuthUser() authUser: User를 넣어준다.
+- AuthUser는 현재 login한 사용자 정보를 준다.
 
 ```
 @ObjectType()
 export class EditProfileInput extends PickType(User, ['email', 'password']) {}
 ```
 
-- pickType은 user class에서 프로퍼티 선택하게 해주지만 EditProfileInput이기 때문에 어떨 때 email password수정, 둘 다, 둘 중 하나 수정하고 싶을 때가 있다.
+- edit-profile.dto.ts 아래에 추가 해준다.
+- pickType은 user class에서 프로퍼티 선택하게 해주지만 EditProfileInput이기 때문에 어떨 때 email, password 수정, 둘 다, 둘 중 하나 수정하고 싶을 때가 있다.
+- @ObjectType을 지운다.
 
 ```
 @InputType()
@@ -4997,7 +5008,7 @@ export class EditProfileInput extends PartialType(
 
 - 그래서 PartialType, PickType 둘 다 사용한다.
 - User에서 email, password를 가지고 class 만들고, PartialType으로 optioal하게 만든다.
-- @InputType()을 써준다.
+- @InputType()으로 써준다.
 
 ```
   editProfile(
@@ -5005,7 +5016,6 @@ export class EditProfileInput extends PartialType(
     @Args('input') editProfileInput: EditProfileInput,
   ): Promise<EditProfileOutput> {}
 }
-
 ```
 
 - users.resolver.ts에서 login과 비슷하게 만들어준다.
@@ -5032,7 +5042,7 @@ export class EditProfileInput extends PartialType(
 ```
 
 - users.service.ts에서 update의 criteria는 id와 userId를 object 형식으로 준다. userId에 해당하는 데이터를 찾는다. email, password를 찾는다.
-- criteria는 다양한 것을 보낼 수 있기 때문에 userId만 보내도 된다.
+- criteria는 다양한 타입(string 등) 을 보낼 수 있기 때문에 userId만 보내도 된다.
 - 언제 update, object를 찾을 지, 만약 찾지 못한다면 에러를 보여주는 것이 중요하다.
 - login 되어 있지 않으면, 누구도 editProfile을 호출할 수 없다.
 - update()는 UpdateResult는 Promise를 return한다. update된 object를 return하는 것이 아닌, update 후 number of afefected row와 raw라고 하는 query가 반환하는 SQL grapql, affected, 그리고 생성된 data인 generatedMaps 의 값을 return한다.
@@ -5055,7 +5065,7 @@ export class EditProfileInput extends PartialType(
   }
 ```
 
-- users.resolver.ts에 try/catch를 적고, 위와 같이 입력해준다.
+- users.resolver.ts에 try/catch, async/await를 적고, 위와 같이 입력해준다.
 
 ```
 mutation {
