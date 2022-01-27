@@ -4631,8 +4631,8 @@ export const AuthUser = createParamDecorator(
   }
 ```
 
-- user의 profile을 볼 수 있는 query를 추가한다.
-- end point(소프트웨어나 제품에 최종목적지인 사용자)를 사용하여 보호한다.
+- users.resolver.ts에 user의 profile을 볼 수 있는 query를 추가한다.
+- @UseGaurds end point(소프트웨어나 제품에 최종목적지인 사용자)를 사용하여 보호한다.
 
 ```
 loginInput: LoginInput): Promise<LoginOutput>
@@ -4670,6 +4670,7 @@ export class UserProfileInput {
   }
 ```
 
+- user을 userProfile로 변경해준다.
 - userProfileInput을 만들고 이제 return 해줘야 한다.
 - findById는 token을 위해 만든 function이다.
 - UserProfileInput에서 userId를 찾는다.
@@ -4766,13 +4767,13 @@ role: UserRole!
   async login(@Args('input') loginInput: LoginInput): Promise<LoginOutput> {
 ```
 
-- 그렇기 때문에 users.resolver.ts에서 LoginOutput과 같이 output을 사용한다.
+- 그렇기 때문에 users.resolver.ts에서 위의 LoginOutput과 같이 output을 사용한다.
 
 ```
 export class LoginOutput extends MutationOutput
 ```
 
-- loginOutput은 MutationOutput을 extends 한 것과 같이 user-profile.dto.ts에도 적용한다.
+- loginOutput은 위에서 MutationOutput을 extends 한 것과 같이 user-profile.dto.ts에도 적용한다.
 
 - login.dto.ts에서는 MutationOutput을 extends하면 error와 ok를 사용할 수 있다.
 - common 폴더 안 entities 폴더 안에 output.dto.ts파일에서 Mutation에서만 사용하는 것이 아니기 때문에 MutationOutput 보다는 CoreOutput로 이름을 변경한다.
@@ -4788,6 +4789,7 @@ export class createAccountOutput extends CoreOutput {}
 ```
 
 - users 폴더 안 dtos 폴더 안에 create-account.dto.ts에도 CoreOutput으로 변경해준다.
+- macbookkim 님 MutationResponse를 선언한 곳에서 F2를 누르고 변수명을 바꾸면 MutationResponse를 사용하는 곳에서도 변수명이 바뀌어요.신.기.하.다
 - CoreOutput은 error, ok를 가지고 있다.
 
 ```
@@ -4799,7 +4801,8 @@ export class UserProfileOutput extends CoreOutput {
 
 ```
 
-- user-profile.dto.ts에서 @Field type을 User로, user는 type을 User로 가진다.
+- user-profile.dto.ts에서 @ArgsType 아래에 @ObjectType Output도 추가로 작성해준다.
+- @Field type을 User로, user는 type을 User로 가진다.
 
 ```
   @Query((returns) => UserProfileOutput)
@@ -4842,8 +4845,8 @@ export class UserProfileOutput extends CoreOutput {
   ```
 
 - user-profile.dto.ts에서 user에 nullable을 붙여준다.
-- 어떨 땐 user를 찾지만, 어떨 때는 못 찾기 때문이다~
-- { nullable: true }도 있지말고 써주기~
+- 어떨 땐 user를 찾지만, 어떨 때는 못 찾기 때문이다.
+- { nullable: true }도 잊지 말고 써준다.
 - users.resolver.ts에서 user을 보면 findById users.service.ts로 이동 findOne을 보면 Entity | undefined이다.
 
 ```
@@ -4940,3 +4943,148 @@ export class UserProfileOutput extends CoreOutput {
 ```
 
 - user 값은 id를 0을 보냈다. 잘못 보냈을 때는 "error": "User Not Found"가 출력되고 정상적으로 작동한다.
+
+# #5.13
+
+- user profile을 수정한다.
+
+```
+  @UseGuards(AuthGaurd)
+  @Mutation(returns => );
+```
+
+- users.resolver.ts에서 @UseGuards(AuthGaurd)를 가져오고 @Mutation 해주고 return을 해줘야 하는데 dto, MutationOutput, MutationInput이 없다.
+
+```
+export class EditProfileOutput extends CoreOutput {}
+
+```
+
+- users 폴더 안에 dtos폴더에서 edit-profile.dto.ts파일을 만들어준다.
+- EditProfileOutput 이름 짓고 error, ok 넘겨주는 CoreOutput를 extends 해준다.
+
+```
+  @UseGuards(AuthGaurd)
+  @Mutation(returns => EditProfileOutput)
+  editProfile()
+```
+
+- users.resolver.ts에서 EditProfileOutput를 가져온다.
+
+```
+  me(@AuthUser() authUser: User) {
+    return authUser;
+  }
+```
+
+- editProfile이 dto를 만들기 위해서는 EditProfileInput이 필요하고, me에서 만든 것과 같이 AuthUser과 필요하다.
+- AuthUser은 현재 login한 사용자 정보를 준다.
+
+```
+@ObjectType()
+export class EditProfileInput extends PickType(User, ['email', 'password']) {}
+```
+
+- pickType은 user class에서 프로퍼티 선택하게 해주지만 EditProfileInput이기 때문에 어떨 때 email password수정, 둘 다, 둘 중 하나 수정하고 싶을 때가 있다.
+
+```
+@InputType()
+export class EditProfileInput extends PartialType(
+  PickType(User, ['email', 'password']),
+) {}
+
+```
+
+- 그래서 PartialType, PickType 둘 다 사용한다.
+- User에서 email, password를 가지고 class 만들고, PartialType으로 optioal하게 만든다.
+- @InputType()을 써준다.
+
+```
+  editProfile(
+    @AuthUser() authUser: User,
+    @Args('input') editProfileInput: EditProfileInput,
+  ): Promise<EditProfileOutput> {}
+}
+
+```
+
+- users.resolver.ts에서 login과 비슷하게 만들어준다.
+
+```
+  async editProfile(userId: number, { email, password }: EditProfileInput) {
+    return this.users.update();
+  }
+```
+
+- users.service.ts에서 update()는 entity를 부분적으로 update()한다. db에 entity 유무를 체크하지 않는다.
+- user가 db에 없어도 login한 경우가 아니면 user service에서 editProfile을 실행할 수 없기 때문에 update()를 사용한다. userId는 token에서 오고, graphql에 오지 않는다.
+- user 존재 유무를 확인하지 않고, 쿠키에서 데코레이터가 주는 userId를 문제 없다고 신뢰하기 때문에 update()한다.
+- update()는 graphql input으로 userId로 받아오지 않기 때문에 신뢰할 수 있다. 데이터가 존재하든 말든 update()해서 빠르다.
+
+```
+(criteria: string | number | Date | ObjectID | FindConditions<User> | string[] | number[] | Date[] | ObjectID[], partialEntity: QueryDeepPartialEntity<User>: Promise<UpdateResult>;)
+```
+
+```
+  async editProfile(userId: number, { email, password }: EditProfileInput) {
+    return this.users.update(userId, { email, password });
+  }
+```
+
+- users.service.ts에서 update의 criteria는 id와 userId를 object 형식으로 준다. userId에 해당하는 데이터를 찾는다. email, password를 찾는다.
+- criteria는 다양한 것을 보낼 수 있기 때문에 userId만 보내도 된다.
+- 언제 update, object를 찾을 지, 만약 찾지 못한다면 에러를 보여주는 것이 중요하다.
+- login 되어 있지 않으면, 누구도 editProfile을 호출할 수 없다.
+- update()는 UpdateResult는 Promise를 return한다. update된 object를 return하는 것이 아닌, update 후 number of afefected row와 raw라고 하는 query가 반환하는 SQL grapql, affected, 그리고 생성된 data인 generatedMaps 의 값을 return한다.
+
+```
+  @UseGuards(AuthGaurd)
+  @Mutation((returns) => EditProfileOutput)
+  async editProfile(
+    @AuthUser() authUser: User,
+    @Args('input') editProfileInput: EditProfileInput,
+  ): Promise<EditProfileOutput> {
+    try {
+      await this.usersService.editProfile(authUser.id, editProfileInput);
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
+  }
+```
+
+- users.resolver.ts에 try/catch를 적고, 위와 같이 입력해준다.
+
+```
+mutation {
+  editProfile(input: {
+    email: "good@naver.com"
+  }) {
+    ok
+    error
+  }
+}
+```
+
+- localhost:3000/graphql에서는 email을 변경해본다.
+
+```
+{
+  "errors": [
+    {
+      "message": "\"password\" 칼럼(해당 릴레이션 \"user\")의 null 값이 not null 제약조건을 위반했습니다.",
+      "locations": [
+        {
+          "line": 4,
+          "column": 5
+        }
+      ],
+      "path": [
+        "editProfile",
+        "error"
+      ],
+```
+
+- 위와 같이 에러가 발생하는 데 고쳐본다.
