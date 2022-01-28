@@ -5120,7 +5120,7 @@ mutation {
 
 - column을 null로 만들려고 하고 있지만, column은 null이면 안된다.
 - password를 보내지 않았기 때문에 colum에는 null value를 보내고 있다.
-- dto가 어떻게 생겼는 지 본다.
+- dto가 어떻게 생겼는지 본다.
 
 ```
   async editProfile(
@@ -5140,6 +5140,19 @@ mutation {
 ```
 
 - users.resolver.ts에서 editProfileInput을 console.log()로 출력해본다.
+
+```
+mutation {
+  editProfile(input: {
+    email: "good@naver.com"
+  }) {
+    ok
+    error
+  }
+}
+```
+
+- localhost에서 실행해보면 console에 찍히는 것을 확인할 수 있다.
 
 ```
 [Object: null prototype] { email: 'good@naver.com' }
