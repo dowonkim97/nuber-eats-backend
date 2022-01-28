@@ -5098,3 +5098,245 @@ mutation {
 ```
 
 - 위와 같이 에러가 발생하는 데 고쳐본다.
+
+# #5.14
+
+```
+{
+  "errors": [
+    {
+      "message": "\"password\" 칼럼(해당 릴레이션 \"user\")의 null 값이 not null 제약조건을 위반했습니다.",
+      "locations": [
+        {
+          "line": 4,
+          "column": 5
+        }
+      ],
+      "path": [
+        "editProfile",
+        "error"
+      ],
+```
+
+- column을 null로 만들려고 하고 있지만, column은 null이면 안된다.
+- password를 보내지 않았기 때문에 colum에는 null value를 보내고 있다.
+- dto가 어떻게 생겼는 지 본다.
+
+```
+  async editProfile(
+    @AuthUser() authUser: User,
+    @Args('input') editProfileInput: EditProfileInput,
+  ): Promise<EditProfileOutput> {
+    try {
+      console.log(editProfileInput);
+      await this.usersService.editProfile(authUser.id, editProfileInput);
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
+  }
+```
+
+- users.resolver.ts에서 editProfileInput을 console.log()로 출력해본다.
+
+```
+[Object: null prototype] { email: 'good@naver.com' }
+```
+
+- 콘솔에 변경된 이메일을 출력하는 것을 알수 있다.
+
+```
+  async editProfile(userId: number, { email, password }: EditProfileInput) {
+    console.log(userId, email, password);
+    return this.users.update(userId, { email, password });
+  }
+```
+
+- users.service.ts에서 userId, email, password를 console.log()한다.
+
+```
+0 good@naver.com undefined
+```
+
+- userId는 0, email good@naver.com이고, password는 undefined가 출력되는 이유는 { email, password } destructuring(구조 분해 할당), spread syntax(전개 구문
+  )를 사용해서 그렇다.
+- https://poiemaweb.com/es6-destructuring (destructuring 검색)
+- https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Operators/Spread_syntax (spread syntax 검색)
+
+```
+ async editProfile(userId: number, editProfileInput: EditProfileInput) {
+    console.log(userId, editProfileInput);
+    // return this.users.update(userId, { email, password });
+  }
+```
+
+- email, password 대신에 editProfileInput으로 변경하고 console.log( editProfileInput)로 본다.
+- "message": "Cannot return null for non-nullable field Mutation.editProfile.",라는 다른 에러메시지가 나온다.
+
+```
+{ email: 'good@naver.com' }
+```
+
+- password가 안 보이고, email만 보인다.
+
+```
+    return this.users.update(userId, { ...editProfileInput });
+```
+
+- db로 undefined 된 데이터를 보내고 싶지 않기 때문에{ ...editProfileInput }해준다.
+
+```
+     return {
+        ok: true,
+      };
+```
+
+- users.resolver.ts에서 ok true return해준다.
+
+```
+mutation {
+  editProfile(input: {
+    email: "good@naver.com"
+  }) {
+    ok
+    error
+  }
+}
+```
+
+```
+{
+  "data": {
+    "editProfile": {
+      "ok": true,
+      "error": null
+    }
+  }
+}
+```
+
+- localhost ok true 출력
+
+```
+{
+	me {
+    email
+  }
+}
+```
+
+```
+{
+  "data": {
+    "me": {
+      "email": "good@naver.com"
+    }
+  }
+}
+```
+
+- me email도 가능
+
+```
+mutation {
+  editProfile(input: {
+    password: "12121212"
+  }) {
+    ok
+    error
+  }
+}
+```
+
+```
+mutation {
+  editProfile(input: {
+    password: "12121212"
+  }) {
+    ok
+    error
+  }
+}
+```
+
+- password 변경도 가능, 하지만 not 해시화 (pgAdmin에서 비밀번호 노출 12121212)
+- users.entity.ts @BeforeUpdate() 안됨
+
+# 5.15
+
+- BeforeUpdate는 특정 entity를 update해야 부를 수 있다.
+- update는 entity 유무 확인하지 않는다 -> 직접 entity update ❌ -> 그냥 db를 query에 있기를 바라면서 보냄
+- save는 entity가 db에 존재하지 않으면 생성(create) 혹은 insert 한다. db에 존재하면 update한다.
+
+```
+  async editProfile(
+    userId: number,
+    { email, password }: EditProfileInput,
+  ): Promise<User> {
+    const user = await this.users.findOne(userId);
+    if (email) {
+      user.email = email;
+    }
+    if (password) {
+      user.password = password;
+    }
+    return this.users.save(user);
+  }
+```
+
+- db말고 js로 직접 entity를 update한다.
+
+```
+mutation {
+  editProfile(input: {
+    password: "13131313"
+  }) {
+    ok
+    error
+  }
+}
+```
+
+- pgAdmin에서 해시화한 것을 확인할 수 있다.
+
+```
+mutation {
+	login(input:{
+      email: "good@naver.com",
+        password: "13131313"
+  }) {
+    ok
+    error
+    token
+  }
+}
+```
+
+```
+{
+	me {
+    email
+  }
+}
+```
+
+```
+{
+  "data": {
+    "me": {
+      "email": "good@naver.com"
+    }
+  }
+}
+```
+
+- 다 잘 나온다.
+- user을 create, read, update하는 것을 배웠다.
+- 계정 삭제 delete는 직접 만들어보기
+- email을 아무때나 수정가능하니까 verify를 해줘야한다. 그러려면 email 모듈을 만들어야 한다.
+
+# $5.16
+
+- 요약 부분 따로 메모 안함 just 강의 시청
