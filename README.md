@@ -5279,6 +5279,7 @@ mutation {
 
 # 5.15
 
+- users.entity.ts에서 hashpassword에서 @BeforeUpdate 아래에 @BeforeUpdate를 입력 해준다.
 - BeforeUpdate는 특정 entity를 update해야 부를 수 있다.
 - update는 entity 유무 확인하지 않는다 -> 직접 entity update ❌ -> 그냥 db를 query에 있기를 바라면서 보냄
 - save는 entity가 db에 존재하지 않으면 생성(create) 혹은 insert 한다. db에 존재하면 update한다.
@@ -5350,6 +5351,58 @@ mutation {
 - 계정 삭제 delete는 직접 만들어보기
 - email을 아무때나 수정가능하니까 verify를 해줘야한다. 그러려면 email 모듈을 만들어야 한다.
 
-# $5.16
+# #5.16
 
 - 요약 부분 따로 메모 안함 just 강의 시청
+
+# #6.10
+
+- email verification
+- users 폴더 안에 entities폴더에 verification.entity.ts파일을 만든다.
+
+```
+export class Verification extends CoreEntity {
+  // 인증코드 필요 verification code
+  @Column()
+  @Field((type) => String)
+  code: string;
+
+  // 일대일 관계 one-to-one relations
+  @OneToOne((type) => User)
+  @JoinColumn()
+  user: User;
+}
+```
+
+- CoreEntity는 id, createdAt, updatedAt 등을 가지고 있다.
+- https://typeorm.io/#/one-to-one-relations (one-to-one relations 검색)
+- 일대일 관계는 A가 B의 인스턴스를 하나만 포함하고 B가 A의 인스턴스를 하나만 포함하는 관계입니다.
+- 즉, Verification entity가 오직 한 명의 User만 가질 수 있다. User도 마찬가지로 하나의 Verification만 가질 수 있다.
+- 대부분이 One-to-many Many-to-one 관계를 사용한다. One-to-many는 한 명의 User는 예를 들어 여러개의 restaurants를 가질 수 있다. Photo도 많은 likes를 받을 수 있다.
+- User가 필요하고, User가 가지고 있는 Verification을 가져오고 싶을 때는 User entity에 @JounColum을 사용한다.
+- Verification을 얻어 Verification으로부터 User로 접근하고 싶으면 Verification entity에 @JounColum을 사용한다.
+
+- 정리하자면
+- User로부터 Verification에 접근하고 싶으면 @JounColum이 User쪽에 있어야 한다.
+- Verification으로부터 User에 접근하려면 @JounColum이 Verification 쪽에 있어야 한다.
+
+```
+    TypeOrmModule.forRoot({
+     entities: [User, Verification]
+    }),
+```
+
+- app.module.ts에서 entities에 Verification을 추가해준다.
+- pgAdmin4에서 code, updatedAt, createdAt 등 추가된 것을 확인할 수 있다.
+
+```
+  @Column({ default: false })
+  @Field((type) => Boolean)
+  verified: boolean;
+```
+
+- users.entity.ts에서 User의 email이 검증(verified) 확인 유무를 저장해야 하기 때문이다.
+
+# #6.1
+
+- users.resolver.ts에서 usersService에의 createAccount에서
