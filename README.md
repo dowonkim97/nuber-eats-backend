@@ -5361,6 +5361,9 @@ mutation {
 - users 폴더 안에 entities폴더에 verification.entity.ts파일을 만든다.
 
 ```
+@InputType({ isAbstract: true })
+@ObjectType()
+@Entity()
 export class Verification extends CoreEntity {
   // 인증코드 필요 verification code
   @Column()
@@ -5374,6 +5377,7 @@ export class Verification extends CoreEntity {
 }
 ```
 
+- verification.entity.ts에는 users.entity.ts에서 데코레이터를 복붙한다.
 - CoreEntity는 id, createdAt, updatedAt 등을 가지고 있다.
 - https://typeorm.io/#/one-to-one-relations (one-to-one relations 검색)
 - 일대일 관계는 A가 B의 인스턴스를 하나만 포함하고 B가 A의 인스턴스를 하나만 포함하는 관계입니다.
@@ -5401,8 +5405,97 @@ export class Verification extends CoreEntity {
   verified: boolean;
 ```
 
-- users.entity.ts에서 User의 email이 검증(verified) 확인 유무를 저장해야 하기 때문이다.
+- users.entity.ts에서 User의 email이 검증(verified) 확인 유무를 저장해야 하기 때문에 추가해준다.
 
 # #6.1
 
-- users.resolver.ts에서 usersService에의 createAccount에서
+- 계획은 users.resolver.ts에서 usersService의 createAccount에서 verification을 만든다.
+
+```
+  imports: [TypeOrmModule.forFeature([User, Verification])],
+```
+
+- users.module.ts에서 TypeOrmModule의 forFeature에 User와 Verification이 들어가 있다.
+
+```
+    @InjectRepository(Verification)
+    private readonly verifications: Repository<Verification>,
+```
+
+- users.service.ts에서 새로운 Verification Repository를 만들어준다.
+
+```
+      // create, save한 것을 user에 가져온다.
+      const user = await this.users.save(
+        this.users.create({ email, password, role }),
+      );
+      // user를 create하고 save하고 있음
+      await this.verifications.save(
+        this.verifications.create({
+          user,
+        }),
+      );
+```
+
+- users.service.ts에서 작성하고 const user 해서 생성하고 가져온다.
+- verification은 code가 필요로 한다.
+- verification.entity.ts에서 훅(Hook)을 생성한다.
+- @BeforeInsert()는 엔터티 삽입(insert) 전에 이 데코레이터가 적용되는 메서드를 호출합니다.
+
+```
+  // code 생성하는 곳에 하는 이유는 다른 곳에도 verification 생성 가능하게 함
+  @BeforeInsert()
+  createCode(): void {
+    // js에서 랜덤 코드는 어떻게 생성할까? -> uuid, Math().random()
+    this.code = 'random code';
+  }
+```
+
+- verification.entity.ts에서 @BeforeInsert()와 void로 createCode()를 실행해준다.
+- 위의 코드가 없으면 DB에 에러가 발생한다. code는 null이면 안되고, 무조건 값을 가지고 있어야 하는 Column이기 때문이다.
+
+```
+Math.random().toString(36) // 36 string
+Math.random().toString(36).substring(2)
+```
+
+- js에서 랜덤 코드는 어떻게 생성할까? uuid나 위의 코드를 이용한다.
+- npm install uuid (vscode 터미널)
+- https://www.npmjs.com/package/uuid (uuid npm 검색)
+
+```
+import { v4 as uuidv4 } from 'uuid';
+    this.code = uuidv4().replace(/-/g, ''); 
+```
+
+- verification.entity.ts에 위 코드를 입력해준다.
+
+```
+mutation {
+	createAccount(input:{
+    email:"new@abc.com",
+    password: "12345",
+    role: Client
+  }) {
+    ok
+    error
+  }
+}
+```
+
+- localhost:3000/graphql로 테스트해본다.
+- pgAdmin4에서는 verified가 false로 나오고 verification table이 정상적으로 나오는 것을 확인할 수 있다.
+
+```
+    if (email) {
+      // user email이 변경되면
+      user.email = email;
+      user.verified = false;
+      // verification 생성
+      // user를 create하고 save하고 있음
+      await this.verifications.save(this.verifications.create({ user }));
+    }
+```
+
+- users.service.ts에서 editProfile에 user.verified를 false로 설정해준다.
+- verification이 삭제되지 않기 때문에 email verify를 시작한다.

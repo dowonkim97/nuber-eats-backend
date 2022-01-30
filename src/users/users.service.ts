@@ -8,11 +8,14 @@ import * as jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from 'src/jwt/jwt.service';
 import { EditProfileInput } from './dtos/edit-Profile.dto';
+import { Verification } from './entities/verification.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Verification)
+    private readonly verifications: Repository<Verification>,
     private readonly jwtService: JwtService,
   ) {}
   // create account
@@ -33,7 +36,18 @@ export class UsersService {
       }
       // else면 아무것도 return 하지 않는다.
       // 인스턴스를 만들고 난 뒤 user를 동시에 저장(save)한다.
-      await this.users.save(this.users.create({ email, password, role }));
+      // create한 것을 user에 가져온다.
+      const user = await this.users.save(
+        this.users.create({ email, password, role }),
+      );
+
+      // verification 생성
+      await this.verifications.save(
+        this.verifications.create({
+          // user를 create하고 save하고 있음
+          user,
+        }),
+      );
       return { ok: true };
     } catch (e) {
       // 에러가 있으면 string을 return한다.
@@ -80,13 +94,20 @@ export class UsersService {
   async findById(id: number): Promise<User> {
     return this.users.findOne({ id });
   }
+  // editProfile에도 verification 생성 가능하게 함
   async editProfile(
     userId: number,
     { email, password }: EditProfileInput,
   ): Promise<User> {
     const user = await this.users.findOne(userId);
     if (email) {
+      // user email이 변경되면
       user.email = email;
+      // user는 verified 되지 않은 상태가 된다.
+      user.verified = false;
+      // verification 생성
+      // user를 create하고 save하고 있음
+      await this.verifications.save(this.verifications.create({ user }));
     }
     if (password) {
       user.password = password;
