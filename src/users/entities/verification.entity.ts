@@ -14,7 +14,9 @@ export class Verification extends CoreEntity {
   code: string;
 
   // one-to-one relations
-  @OneToOne((type) => User)
+  // "CASCADE"는 user를 삭제하면 user와 verification도 삭제됨
+  // "SET NULL"은 null인 verification도 존재하게 함
+  @OneToOne((type) => User, { onDelete: 'CASCADE' }) //
   @JoinColumn()
   user: User;
 

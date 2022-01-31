@@ -5460,12 +5460,17 @@ Math.random().toString(36).substring(2)
 ```
 
 - js에서 랜덤 코드는 어떻게 생성할까? uuid나 위의 코드를 이용한다.
+
+```
+npm install uuid
+```
+
 - npm install uuid (vscode 터미널)
 - https://www.npmjs.com/package/uuid (uuid npm 검색)
 
 ```
 import { v4 as uuidv4 } from 'uuid';
-    this.code = uuidv4().replace(/-/g, ''); 
+    this.code = uuidv4().replace(/-/g, '');
 ```
 
 - verification.entity.ts에 위 코드를 입력해준다.
@@ -5499,3 +5504,334 @@ mutation {
 
 - users.service.ts에서 editProfile에 user.verified를 false로 설정해준다.
 - verification이 삭제되지 않기 때문에 email verify를 시작한다.
+
+# #6.2
+
+- veriofication code를 사용해 그들의 verification을 찾고, 찾은 것을 지우고 난 후, user를 verify한다.
+
+```
+@ObjectType()
+export class VerifyEmailOutput extends CoreOutput {}
+
+@InputType()
+// PickType get code
+export class VerifyEmailInput extends PickType(Verification, ['code']) {}
+
+```
+
+- verify-email.dto.ts에서는 위와 같이 작성해준다.
+
+```
+ //  @UseGuards(AuthGaurd) 인증 여부는 없어도 될 것 같음
+  @Mutation((returns) => VerifyEmailOutput)
+  // 또는 VerifyEmailInput 대신 {code}, VerifyEmailInput.code 대신 code를 넣어도 된다.
+  verifyEmail(@Args('input') { code }: VerifyEmailInput) {
+    this.usersService.verifyEmail(code);
+  }
+```
+
+- users.resolver.ts에는 위와 같이 작성해준다.
+- localhost:3000/graphql DOCS에서 verifyEmail, input에 code까지 확인할 수 있다.
+
+users.service.ts
+
+```
+mutation {
+  verifyEmail(input: {
+    code: "verification 테이블 code 값"
+  }) {
+    ok
+    error
+  }
+}
+
+```
+
+- localhost:3000/graphql에 pgAdmin4에서 verification 테이블에서 code값을 입력해준다. 다음과 같이 전송한다.
+-
+
+```
+  async verifyEmail(code: string): Promise<boolean> {
+    // verification을 찾는다.
+
+    const verification = await this.verifications.findOne(
+      { code },
+      //{ loadRelationIds: true } console user: 5 } 5
+      { relations: ['user'] }, // 통째로 받아오는 방법이고, 늘 user를 가져온다.
+    );
+    if (verification) {
+      // verification.user는 undefined
+      // TypeORM default로 relationship을 불러오지 않는다.
+      // console.log(verification);
+      // 존재하면 삭제하고, 연결된 user의 verification을 verified true로 바꾼다.
+      verification.user.verified = true;
+      this.users.save(verification.user);
+    }
+    return false;
+  }
+```
+
+- users.service.ts에서 다음과 같이 작성해준다.
+- pgAdmin4에서 ture로 출력된다.
+
+# #6.4
+
+- email에 hash가 있고, password에도 verify하면 hash된 것을 또 hash하고 있다.
+- 로그인하면 false가 나오고, verify하면 hash도 같이 바뀌는 문제점이 발생한다.
+- password가 account 내에서 잠겨버린 것이다.
+
+```
+      this.users.save(verification.user);
+```
+
+- users.service.ts에서 User 정보를 업데이트하는 save()를 한 번 더 호출했기 때문이다.
+
+- users.entity.ts에서 User는 BefireUpdate()가 있는데 password를 가져와서 암호화해버린다. 그래서 암호화된 게 또 암호화된다.
+
+```
+      console.log(verification.user);
+
+```
+
+- users.service.ts에서 console로 찍으면 password가 나오는 것을 확인할 수 있다.
+
+```
+
+  @Column({ select: false })
+  @Field((type) => String)
+  password: string;
+
+```
+
+- first step
+- users.resolver.ts에서 select를 넣으면, password는 User에 더 이상 포함되지 않는다.
+- 새로운 password를 제외한 object가 있고, save()로 전달하면 typeORM은 password가 변경되지 않았다고 생각한다. 즉, 새로운 password를 추가하지 않는다.
+
+```
+  @BeforeInsert()
+  @BeforeUpdate()
+  async hashPassword(): Promise<void> {
+    if (this.password) {
+      try {
+        this.password = await bcrypt.hash(this.password, 10);
+        // 패스워드를 못생기게 바꾼다.
+      } catch (error) {
+        console.log(error);
+        throw new InternalServerErrorException();
+      }
+    }
+  }
+```
+
+- secound step
+- users.entity.ts에 hashPassword()에서 password가 있을 경우만 password를 hash하도록 한다.
+- BeforeInsert, BeforeUpdate 할 때, password가 들어가 있으면 password를 hash하도록 한다.
+
+```
+  if (password) {
+      user.password = password;
+    }
+    return this.users.save(user);
+```
+
+```
+      this.users.save(verification.user);
+```
+
+- users.save()로 전달된 object에 password가 있으면 password를 hash하도록 한다.
+- password를 가지고 있지 않으면 this.users.save(user)에는 user에는 password가 담겨있을 것이고, 담기게 된다.
+- password를 가지고 있으면 BeforeUpdate(), hashPassword()가 실행된다.
+
+```
+    const verification = await this.verifications.findOne(
+      { code },
+      { relations: ['user'] },
+    );
+```
+
+```
+  @Column({ select: false })
+  @Field((type) => String)
+  password: string;
+```
+
+```
+      this.users.save(verification.user);
+```
+
+```
+  try {
+        this.password = await bcrypt.hash(this.password, 10);
+        // 패스워드를 못생기게 바꾼다.
+      } catch (error) {
+        console.log(error);
+        throw new InternalServerErrorException();
+      }
+```
+
+- users.service.ts에서 user를 불러오고, users.entity.ts에서 password는 select 하지 않게 했다. users.service.ts에서는 user를 users.save()를 호출하면 user에는 password가 담기지 않을 것이고, TypeORM에는 담기지 않고, users.entity.ts에서 try/catch부분을 실행하지 않게 된다. object에 password가 없기 때문이다.
+
+```
+  // one-to-one relations
+  // "CASCADE"는 user를 삭제하면 user와 verification도 삭제됨
+  // "SET NULL"은 null인 verification도 존재하게 함
+  @OneToOne((type) => User, { onDelete: 'CASCADE' }) //
+  @JoinColumn()
+  user: User;
+```
+
+- verification.entity.ts에서 위와 같이 입력해준다.
+
+```
+DELETE FROM public."user"
+	WHERE ID=number;
+```
+
+- user의 id를 삭제해주고 계정을 다시 만들어준다.
+
+```
+mutation {
+	createAccount(input:{
+    email:"new@abc.com",
+    password: "12345",
+    role: Client
+  }) {
+    ok
+    error
+  }
+}
+```
+
+- 정상적으로 계정생성됨
+
+```
+mutation {
+	login(input:{
+      email: "new@abc.com",
+        password: "12345"
+  }) {
+    ok
+    error
+    token
+  }
+}
+```
+
+- data and hash arguments required entity를 변경했기 때문에 에러메시지 발생
+
+```
+  @Column({ select: false })
+  @Field((type) => String)
+  password: string;
+```
+
+- select가 false이다.
+
+```
+      const ok = await bcrypt.compare(aPassword, this.password);
+```
+
+- this.password가 정의되지 않았다. this.password가 selct되지 않고 있다.
+
+```
+  const user = await this.users.findOne(
+        { email },
+        { select: ['password'] },
+      );
+```
+
+- users.service.ts findOne에게 selct하고 싶다고 전달해줘야 한다.
+- null이였지만, user.checkPassword에서 this.password를 가지게 된다.
+- user.id도 select해준다. 다음번에 로그인할 때 user.id도 필요로 하기 때문이다.
+
+```
+User {
+  password: 'token '
+}
+```
+
+```
+      const token = this.jwtService.sign(user.id)
+```
+
+- token이 아무것도 없이 sign 되었다. user.id가 undefined되었다.
+
+```
+  sign(userId: number): string {
+    console.log(userId);
+    return jwt.sign({ id: userId }, this.options.privateKey);
+  }
+```
+
+- jwt.service.ts에서 console.log()를 찍어보면 undefined되었다.
+
+```
+      const user = await this.users.findOne(
+        { email },
+        { select: ['id', 'password'] },
+      );
+```
+
+- users.service.ts에서 id도 select해준다.
+
+```
+  async verifyEmail(code: string): Promise<boolean> {
+    // verification을 찾는다.
+    try {
+      const verification = await this.verifications.findOne(
+        { code },
+        //{ loadRelationIds: true } console user: 5 } 5
+        { relations: ['user'] }, // 통째로 받아오는 방법이고, 늘 user를 가져온다.
+      );
+      if (verification) {
+        // verification.user는 undefined
+        // TypeORM default로 relationship을 불러오지 않는다.
+        // console.log(verification);
+        // 존재하면 삭제하고, 연결된 user의 verification을 verified true로 바꾼다.
+        verification.user.verified = true;
+        console.log(verification.user);
+        this.users.save(verification.user);
+      }
+      throw new Error();
+    } catch (e) {
+      return true;
+    }
+  }
+```
+
+- users.service.ts에서 try/catch로 에러 핸들링 후 return true로 변경해준다.
+
+```
+ @Mutation((returns) => VerifyEmailOutput)
+  // 또는 VerifyEmailInput 대신 {code}, VerifyEmailInput.code 대신 code를 넣어도 된다.
+  async verifyEmail(
+    @Args('input') { code }: VerifyEmailInput,
+  ): Promise<VerifyEmailOutput> {
+    try {
+      await this.usersService.verifyEmail(code);
+      return {
+        ok: true,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
+  }
+```
+
+- users.resolver.ts에도 try/catch로 에러 핸들링 후, async/await Promise를 해준다.
+
+```
+mutation {
+  verifyEmail(input: {
+    code: "pgadmin4에서 code값"
+  }) {
+    ok
+    error
+  }
+}
+```
+
+- localhost:3000/graphql에서 출력해보면, pgAdmin4에서 hash값이 바뀌지 않는 것을 확인할 수 있다.

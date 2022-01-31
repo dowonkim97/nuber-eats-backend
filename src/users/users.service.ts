@@ -61,7 +61,10 @@ export class UsersService {
   }: LoginInput): Promise<{ ok: boolean; error?: string; token?: string }> {
     try {
       // email을 가진 user를 찾는다(find).
-      const user = await this.users.findOne({ email });
+      const user = await this.users.findOne(
+        { email },
+        { select: ['id', 'password'] },
+      );
       // user가 존재하지 않는다면
       if (!user) {
         return {
@@ -77,6 +80,7 @@ export class UsersService {
           error: '잘못된 비밀번호입니다.',
         };
       }
+      console.log(user);
       // 누구든 token을 못보게 user ID만 넣어준다.
       // process.env.SECRET_KEY로 해도 괜찮지만, nethjs 방식이 아니다.
       const token = this.jwtService.sign(user.id);
@@ -113,5 +117,28 @@ export class UsersService {
       user.password = password;
     }
     return this.users.save(user);
+  }
+
+  async verifyEmail(code: string): Promise<boolean> {
+    // verification을 찾는다.
+    try {
+      const verification = await this.verifications.findOne(
+        { code },
+        //{ loadRelationIds: true } console user: 5 } 5
+        { relations: ['user'] }, // 통째로 받아오는 방법이고, 늘 user를 가져온다.
+      );
+      if (verification) {
+        // verification.user는 undefined
+        // TypeORM default로 relationship을 불러오지 않는다.
+        // console.log(verification);
+        // 존재하면 삭제하고, 연결된 user의 verification을 verified true로 바꾼다.
+        verification.user.verified = true;
+        console.log(verification.user);
+        this.users.save(verification.user);
+      }
+      throw new Error();
+    } catch (e) {
+      return true;
+    }
   }
 }

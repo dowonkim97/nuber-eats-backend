@@ -9,6 +9,7 @@ import {
 import { EditProfileInput, EditProfileOutput } from './dtos/edit-Profile.dto';
 import { LoginInput, LoginOutput } from './dtos/login.dto';
 import { UserProfileInput, UserProfileOutput } from './dtos/user-profile.dto';
+import { VerifyEmailInput, VerifyEmailOutput } from './dtos/verify-email.dto';
 import { User } from './entities/users.entity';
 import { UsersService } from './users.service';
 
@@ -129,6 +130,22 @@ export class UsersResolver {
       };
     }
   }
+  //  @UseGuards(AuthGaurd) 인증 여부는 없어도 될 것 같음
+  @Mutation((returns) => VerifyEmailOutput)
+  // 또는 VerifyEmailInput 대신 {code}, VerifyEmailInput.code 대신 code를 넣어도 된다.
+  async verifyEmail(
+    @Args('input') { code }: VerifyEmailInput,
+  ): Promise<VerifyEmailOutput> {
+    try {
+      await this.usersService.verifyEmail(code);
+      return {
+        ok: true,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
+  }
 }
-
-// JWT를 만들고 user에게 준다(give).
