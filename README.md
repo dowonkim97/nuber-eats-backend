@@ -5507,7 +5507,7 @@ mutation {
 
 # #6.2
 
-- veriofication code를 사용해 그들의 verification을 찾고, 찾은 것을 지우고 난 후, user를 verify한다.
+- 계획은 veriofication code를 사용해 그들의 verification을 찾고, 찾은 것을 지우고 난 후, user를 verify한다.
 
 ```
 @ObjectType()
@@ -5519,7 +5519,7 @@ export class VerifyEmailInput extends PickType(Verification, ['code']) {}
 
 ```
 
-- verify-email.dto.ts에서는 위와 같이 작성해준다.
+- users폴더 dtos폴더에 verify-email.dto.ts파일을 만들고, 위와 같이 작성해준다.
 
 ```
  //  @UseGuards(AuthGaurd) 인증 여부는 없어도 될 것 같음
@@ -5532,8 +5532,6 @@ export class VerifyEmailInput extends PickType(Verification, ['code']) {}
 
 - users.resolver.ts에는 위와 같이 작성해준다.
 - localhost:3000/graphql DOCS에서 verifyEmail, input에 code까지 확인할 수 있다.
-
-users.service.ts
 
 ```
 mutation {
@@ -5548,7 +5546,6 @@ mutation {
 ```
 
 - localhost:3000/graphql에 pgAdmin4에서 verification 테이블에서 code값을 입력해준다. 다음과 같이 전송한다.
--
 
 ```
   async verifyEmail(code: string): Promise<boolean> {
@@ -5574,7 +5571,7 @@ mutation {
 - users.service.ts에서 다음과 같이 작성해준다.
 - pgAdmin4에서 ture로 출력된다.
 
-# #6.4
+# #6.3
 
 - email에 hash가 있고, password에도 verify하면 hash된 것을 또 hash하고 있다.
 - 로그인하면 false가 나오고, verify하면 hash도 같이 바뀌는 문제점이 발생한다.
@@ -5604,7 +5601,7 @@ mutation {
 ```
 
 - first step
-- users.resolver.ts에서 select를 넣으면, password는 User에 더 이상 포함되지 않는다.
+- users.entity.ts에서 select를 넣으면, password는 User에 더 이상 포함되지 않는다.
 - 새로운 password를 제외한 object가 있고, save()로 전달하면 typeORM은 password가 변경되지 않았다고 생각한다. 즉, 새로운 password를 추가하지 않는다.
 
 ```
@@ -5660,16 +5657,19 @@ mutation {
 ```
 
 ```
-  try {
+    if (this.password) {
+      try {
         this.password = await bcrypt.hash(this.password, 10);
-        // 패스워드를 못생기게 바꾼다.
       } catch (error) {
         console.log(error);
         throw new InternalServerErrorException();
       }
+    }
 ```
 
-- users.service.ts에서 user를 불러오고, users.entity.ts에서 password는 select 하지 않게 했다. users.service.ts에서는 user를 users.save()를 호출하면 user에는 password가 담기지 않을 것이고, TypeORM에는 담기지 않고, users.entity.ts에서 try/catch부분을 실행하지 않게 된다. object에 password가 없기 때문이다.
+- users.service.ts에서 user를 불러오고, users.entity.ts에서 password는 select 하지 않게 했다.
+- users.service.ts에서는 user를 users.save()를 호출하면 user에는 password가 담기지 않을 것이고, TypeORM에는 담기지 않고, users.entity.ts에서 try/catch부분을 실행하지 않게 된다.
+- object에 password가 없기 때문이다.
 
 ```
   // one-to-one relations
