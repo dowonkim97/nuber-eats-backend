@@ -1,14 +1,19 @@
 import { Injectable, Query } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { createAccountInput } from './dtos/create-account.dto';
-import { LoginInput } from './dtos/login.dto';
+import {
+  createAccountInput,
+  createAccountOutput,
+} from './dtos/create-account.dto';
+import { LoginInput, LoginOutput } from './dtos/login.dto';
 import { User } from './entities/users.entity';
 import * as jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from 'src/jwt/jwt.service';
-import { EditProfileInput } from './dtos/edit-Profile.dto';
+import { EditProfileInput, EditProfileOutput } from './dtos/edit-Profile.dto';
 import { Verification } from './entities/verification.entity';
+import { VerifyEmailOutput } from './dtos/verify-email.dto';
+import { UserProfileOutput } from './dtos/user-profile.dto';
 
 @Injectable()
 export class UsersService {
@@ -23,7 +28,8 @@ export class UsersService {
     email,
     password,
     role,
-  }: createAccountInput): Promise<{ ok: boolean; error?: string }> {
+  }: //  }: createAccountInput): Promise<{ ok: boolean; error?: string }> {
+  createAccountInput): Promise<createAccountOutput> {
     try {
       // email을 가지고 있는 지 확인
       const exists = await this.users.findOne({ email });
@@ -58,7 +64,8 @@ export class UsersService {
   async login({
     email,
     password,
-  }: LoginInput): Promise<{ ok: boolean; error?: string; token?: string }> {
+  }: // }: LoginInput): Promise<{ ok: boolean; error?: string; token?: string }> {
+  LoginInput): Promise<LoginOutput> {
     try {
       // email을 가진 user를 찾는다(find).
       const user = await this.users.findOne(
@@ -95,31 +102,55 @@ export class UsersService {
       };
     }
   }
-  async findById(id: number): Promise<User> {
-    return this.users.findOne({ id });
+  async findById(id: number): Promise<UserProfileOutput> {
+    try {
+      const user = await this.users.findOne({ id });
+      if (user) {
+        return {
+          ok: true,
+          user,
+        };
+      }
+    } catch (error) {
+      // user 못 찾으면 여기로 보냄
+      return {
+        ok: false,
+        error: 'User Not Found',
+      };
+    }
   }
+
   // editProfile에도 verification 생성 가능하게 함
   async editProfile(
     userId: number,
     { email, password }: EditProfileInput,
-  ): Promise<User> {
-    const user = await this.users.findOne(userId);
-    if (email) {
-      // user email이 변경되면
-      user.email = email;
-      // user는 verified 되지 않은 상태가 된다.
-      user.verified = false;
-      // verification 생성
-      // user를 create하고 save하고 있음
-      await this.verifications.save(this.verifications.create({ user }));
+  ): //   ): Promise<User> {
+  Promise<EditProfileOutput> {
+    try {
+      const user = await this.users.findOne(userId);
+      if (email) {
+        // user email이 변경되면
+        user.email = email;
+        // user는 verified 되지 않은 상태가 된다.
+        user.verified = false;
+        // verification 생성
+        // user를 create하고 save하고 있음
+        await this.verifications.save(this.verifications.create({ user }));
+      }
+      if (password) {
+        user.password = password;
+      }
+      await this.users.save(user);
+      return {
+        ok: true,
+      };
+    } catch (error) {
+      return { ok: false, error: '프로필을 업데이트 할 수 없습니다.' };
     }
-    if (password) {
-      user.password = password;
-    }
-    return this.users.save(user);
   }
-
-  async verifyEmail(code: string): Promise<boolean> {
+  // service도 resolver처럼 output을 공유한다.
+  // async verifyEmail(code: string): Promise<boolean> {
+  async verifyEmail(code: string): Promise<VerifyEmailOutput> {
     // verification을 찾는다.
     try {
       const verification = await this.verifications.findOne(
@@ -133,12 +164,15 @@ export class UsersService {
         // console.log(verification);
         // 존재하면 삭제하고, 연결된 user의 verification을 verified true로 바꾼다.
         verification.user.verified = true;
-        console.log(verification.user);
+        // console.log(verification.user);
         this.users.save(verification.user);
+        // return true;
+        return { ok: true };
       }
-      throw new Error();
-    } catch (e) {
-      return true;
+      // throw new Error();
+      return { ok: false, error: '다시 인증해주세요.' };
+    } catch (error) {
+      return { ok: false, error };
     }
   }
 }

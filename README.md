@@ -5835,3 +5835,25 @@ mutation {
 ```
 
 - localhost:3000/graphql에서 출력해보면, pgAdmin4에서 hash값이 바뀌지 않는 것을 확인할 수 있다.
+
+# #6.4
+
+- service나 resolver를 clean code한다.
+- nico github 코드 참조
+
+```
+    return this.usersService.verifyEmail(code);
+```
+
+- users.resolver.ts에서 return 해주는 이유는 비동기함수이기 때문이다. 브라우저가 auto로 function이 끝나길 기다려준다(await).
+
+```
+async
+const { ok, error } = await this.~
+return { ok, error}
+```
+
+- 위 코드 처럼 명시적으로 써줄수도 있다.
+- resolver는 도어맨이다. input 받아서 input을 service로 전달해줌.
+- service는 이들을 다루는 로직이다.
+- controller도 있었는데 url 다루는 것이였다. controller는 일을 service에 주었다.
