@@ -108,7 +108,7 @@ export class UsersService {
       if (user) {
         return {
           ok: true,
-          user,
+          user: user,
         };
       }
     } catch (error) {
