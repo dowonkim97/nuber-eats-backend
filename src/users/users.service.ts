@@ -165,7 +165,10 @@ export class UsersService {
         // 존재하면 삭제하고, 연결된 user의 verification을 verified true로 바꾼다.
         verification.user.verified = true;
         // console.log(verification.user);
-        this.users.save(verification.user);
+        // verification이 있으면 유저 인증됨.
+        await this.users.save(verification.user);
+        // 사용자 당 하나의 인증서만 가질 수 있고, 인증서당 하나의 유저만 가질 수 있기 때문에 verification 삭제해준다.
+        await this.verifications.delete(verification.id);
         // return true;
         return { ok: true };
       }

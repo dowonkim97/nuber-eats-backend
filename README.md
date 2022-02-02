@@ -5857,3 +5857,15 @@ return { ok, error}
 - resolver는 도어맨이다. input 받아서 input을 service로 전달해줌.
 - service는 이들을 다루는 로직이다.
 - controller도 있었는데 url 다루는 것이였다. controller는 일을 service에 주었다.
+
+# #6.5
+
+```
+        await this.users.save(verification.user);
+        // 사용자 당 하나의 인증서만 가질 수 있고, 인증서당 하나의 유저만 가질 수 있기 때문에 인증되면 verification 삭제해준다.
+        await this.verifications.delete(verification.id);
+```
+
+- users.service.ts에서 위와 같이 입력해준다.
+
+- - https://www.mailgun.com/
