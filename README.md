@@ -5869,3 +5869,7 @@ return { ok, error}
 - users.service.ts에서 위와 같이 입력해준다.
 
 - - https://www.mailgun.com/
+
+# #~
+
+- 개인프로젝트 진행중 2022.02.03~
