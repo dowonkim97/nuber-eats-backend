@@ -685,7 +685,7 @@ export 된 멤버가 아니기 때문이다.
 
 - DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME 모두 string으로 해준다
   .env.dev에서 DB_PASSWORD=12345를 지우니까 "DB_PASSWORD" is required 에러가 발생한다. 이렇게 스키마의 유효성을 검사할 수 있다.
-  이렇듯 joi를 활용해 process.env 변수의 존재를 체크할 수 잇다.
+  이렇듯 joi를 활용해 process.env 변수의 존재를 체크할 수 있다.
 
 - 지금까지 Type ORM을 이용한 DB 연결을 했다.
 
@@ -5873,3 +5873,78 @@ return { ok, error}
 # #~
 
 - 개인프로젝트 진행중 2022.02.03~
+
+# #6.6
+
+- 이메일 모듈을 만든다.
+
+- https://github.com/nest-modules/mailer (nestjs email module 검색)
+
+- https://nest-modules.github.io/mailer/ (mailer docs)
+- pug도 연동되서 더 복잡한 메일을 보낼 수 있다.
+
+```
+@Module({
+  imports: [
+    MailerModule.forRoot({
+      // 설정을 아래와 같이 하고
+      transport: 'smtps://user@domain.com:pass@smtp.domain.com',
+      defaults: {
+        from: '"nest-modules" <modules@nestjs.com>',
+      },
+      // template에서는 pug로 HTML 변수를 넣을 수 있다.
+      template: {
+        dir: __dirname + '/templates',
+        adapter: new PugAdapter(),
+        options: {
+          strict: true,
+        },
+      },
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+- nest g mo mail (vscode 터미널)
+- mail이라는 모듈을 만들어준다.
+- JWT모듈을 global 빼고 복붙해준다.
+
+- common폴더에 common.constants.ts파일을 만들어준다.
+
+```
+export const CONFIG_OPTIONS = 'CONFIG_OPTIONS';
+```
+
+- jwt.constants.ts파일에 있던 위의 내용을 복붙해서 jwt.constants.ts파일 내용은 삭제해주고, common.constants.ts에 넣어준다.
+- 이제는 아무곳(전역)에서나 CONFIG_OPTIONS을 사용할 수 있다.
+
+```
+export interface MailModuleOptions {
+  apiKey: string;
+  domain: string;
+  fromEmail: string;
+}
+```
+
+- mail.interfaces.ts를 만들어준다.
+
+- MAILGUN_API_KEY, MAILGUN_DOMAIN, MAILGUN_FROM_EMAIL를 .env파일에 입력해준다.
+
+```
+    MailModule.forRoot({
+      apiKey: process.env.MAILGUN_API_KEY,
+      fromEmail: process.env.MAILGUN_DOMAIN,
+      domain: process.env.MAILGUN_FROM_EMAIL,
+    }),
+```
+
+- app.module.ts에서 위와 같이 설정해준다.
+
+```
+  MAILGUN_API_KEY: Joi.string().required(),
+  MAILGUN_DOMAIN: Joi.string().required(),
+  MAILGUN_FROM_EMAIL: Joi.string().required(),
+```
+
+- app.module.ts에서 joi로 스키마의 유효성을 검사한다.
