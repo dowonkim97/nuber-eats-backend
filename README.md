@@ -5355,7 +5355,7 @@ mutation {
 
 - 요약 부분 따로 메모 안함 just 강의 시청
 
-# #6.10
+# #6.0
 
 - email verification
 - users 폴더 안에 entities폴더에 verification.entity.ts파일을 만든다.
@@ -5908,7 +5908,7 @@ export class AppModule {}
 
 - nest g mo mail (vscode 터미널)
 - mail이라는 모듈을 만들어준다.
-- JWT모듈을 global 빼고 복붙해준다.
+- jwt.module.ts JWT모듈을 global 빼고 mail.module.ts에 복붙해준다.
 
 - common폴더에 common.constants.ts파일을 만들어준다.
 
@@ -5929,7 +5929,13 @@ export interface MailModuleOptions {
 
 - mail.interfaces.ts를 만들어준다.
 
-- MAILGUN_API_KEY, MAILGUN_DOMAIN, MAILGUN_FROM_EMAIL를 .env파일에 입력해준다.
+```
+ MAILGUN_API_KEY=""
+ MAILGUN_DOMAIN=""
+ MAILGUN_FROM_EMAIL=""
+```
+
+- 위의 값(value)를 각각 .env파일에 입력해준다.
 
 ```
     MailModule.forRoot({
@@ -5948,3 +5954,19 @@ export interface MailModuleOptions {
 ```
 
 - app.module.ts에서 joi로 스키마의 유효성을 검사한다.
+
+```
+@Module({})
+export class MailModule {
+  static forRoot(options: MailModuleOptions): DynamicModule {
+    return {
+      module: MailModule,
+      // jwt.interfaces.ts와 같이 CONFIG_OPTIONS을 만든다.
+      providers: [{ provide: CONFIG_OPTIONS, useValue: options }],
+      exports: [],
+    };
+  }
+}
+```
+
+- mail.module.ts은 위 코드와 같이 입력해준다.
