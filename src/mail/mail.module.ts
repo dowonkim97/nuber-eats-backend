@@ -1,6 +1,7 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { CONFIG_OPTIONS } from 'src/common/common.constants';
 import { MailModuleOptions } from './mail.interfaces';
+import { MailService } from './mail.service';
 
 @Module({})
 export class MailModule {
@@ -8,8 +9,13 @@ export class MailModule {
     return {
       module: MailModule,
       // jwt.interfaces.ts와 같이 CONFIG_OPTIONS을 만든다.
-      providers: [{ provide: CONFIG_OPTIONS, useValue: options }],
-      exports: [],
+      providers: [
+        { provide: CONFIG_OPTIONS, useValue: options },
+        // providers MailService 추가
+        MailService,
+      ],
+      // exports MailService 추가
+      exports: [MailService],
     };
   }
 }

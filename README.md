@@ -5940,8 +5940,8 @@ export interface MailModuleOptions {
 ```
     MailModule.forRoot({
       apiKey: process.env.MAILGUN_API_KEY,
-      fromEmail: process.env.MAILGUN_DOMAIN,
-      domain: process.env.MAILGUN_FROM_EMAIL,
+      fromEmail: process.env.MAILGUN_FROM_EMAIL,
+      domain: process.env.MAILGUN_DOMAIN,
     }),
 ```
 
@@ -5970,3 +5970,118 @@ export class MailModule {
 ```
 
 - mail.module.ts은 위 코드와 같이 입력해준다.
+
+# #6.7
+
+- mail폴더에 mail.service.ts파일을 만들어준다.
+
+```
+@Injectable()
+export class MailService {
+  constructor(
+    @Inject(CONFIG_OPTIONS) private readonly options: MailModuleOptions,
+  ) {
+    console.log(options);
+  }
+}
+
+```
+
+- jwt.service.ts를 복붙해서 mail.service.ts에 넣어주고, 일부는 변경해준다.
+
+```
+@Module({})
+export class MailModule {
+  static forRoot(options: MailModuleOptions): DynamicModule {
+    return {
+      module: MailModule,
+      // jwt.interfaces.ts와 같이 CONFIG_OPTIONS을 만든다.
+      providers: [
+        { provide: CONFIG_OPTIONS, useValue: options },
+        // providers MailService 추가
+        MailService,
+      ],
+      // exports MailService 추가
+      exports: [MailService],
+    };
+  }
+}
+```
+
+- mail.module.ts에는 MailService를 추가해준다.
+
+```
+{
+  apiKey: 'bla~',
+  fromEmail: 'bla~',
+  domain: "bla~"
+}
+```
+
+- 위 코드가 콘솔 로그에 출력된다.
+- 다른 프로젝트에도 사용할 수 있게 send email only처럼 할 수 있고, 프로젝트에 맞춰서 구체적으로 만들 수도 있다.
+- API를 실행하기 위해 cURL을 사용한다.
+- nodeJS front-end에는 fetch가 없기 때문에 패키지를 설치한다.
+- https://velog.io/@delilah/Node.js-fetch-API (nodejs fetch 검색)
+- fetch란 자바스크립트에서 서버로 네트워크 요청(request)을 보내고 응답(response)을 받을 수 있도록 해주는 메서드이다.
+- request 패키지는 자바스크립트 생태계를 위해 중단되서 got란 것을 설치한다.
+- https://github.com/request/request/issues/3142 (request 검색)
+- npm i got@11.8.3 (vscode 터미널)
+- npm i form-data (vscode 터미널)
+
+```
+import * as FormData from 'form-data';
+```
+
+- form_data_1.default is not a constructor 에러메시지가 나오기 때문에 \* as를 붙여준다.
+
+- MAILGUN_DOMAIN을 ${this.options.domain}에 맞게 고쳐줘야 Mailgun Magnificent API 에러 메시지가 나오지 않는다.
+
+```
+import got from 'got';
+// form_data_1.default is not a constructor -> * as
+import * as FormData from 'form-data';
+
+@Injectable()
+export class MailService {
+  constructor(
+    @Inject(CONFIG_OPTIONS) private readonly options: MailModuleOptions,
+  ) {
+    // console.log(options);
+    this.sendEmail('testing', 'test')
+      .then(() => {
+        console.log('Message sent');
+      })
+      .catch((e) => {
+        console.log(e.response.body);
+      });
+    // 이메일을 보내는 기능 -> 인증메일을 보내는 서비스
+  }
+
+  private async sendEmail(subject: string, content: string) {
+    const form = new FormData();
+    form.append('from', `Excited User <mailgun@${this.options.domain}>`);
+    form.append('to', `${this.options.fromEmail}`);
+    form.append('subject', subject);
+    form.append('text', content);
+    const response = await got(
+      `https://api.mailgun.net/v3/${this.options.domain}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          // node > Buffer.from(`api:YOUR_API_KEY`).toString(`base64`)
+          // Buffer는 Node.js 에서 제공하는 Binary의 데이터를 담을 수 있는 객체
+          Authorization: `Basic ${Buffer.from(
+            `api:${this.options.apiKey}`,
+          ).toString('base64')}`,
+        },
+        body: form,
+      },
+    );
+    console.log(response.body);
+  }
+}
+```
+
+- mail.service.ts에는 위와 같이 된다.
+- https://sangwook.github.io/2014/07/06/farewell-node-js-tj-holowaychuk.html (TJ Holowaychuk 검색)
