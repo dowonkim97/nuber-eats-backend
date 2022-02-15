@@ -6085,3 +6085,25 @@ export class MailService {
 
 - mail.service.ts에는 위와 같이 된다.
 - https://sangwook.github.io/2014/07/06/farewell-node-js-tj-holowaychuk.html (TJ Holowaychuk 검색)
+
+# #6.8
+
+```
+{{username}} 님의 회원가입이 완료되었습니다.
+a href="http://127.0.0.1:3000/confirm?code={{code}}"
+```
+
+- 위의 코드를 추가해주며 mailgun에서 템플릿 만들어준다.
+
+```
+  private async sendEmail(subject: string, template: string) {
+    const form = new FormData();
+    form.append('from', `Excited User <mailgun@${this.options.domain}>`);
+    form.append('to', `${this.options.fromEmail}`);
+    form.append('subject', subject);
+    form.append('template', template);
+    form.append('v:code', 'sdfsf');
+    form.append('v:username', 'won');
+```
+
+- mail.service.ts에서 template, v:code, v:username 추가해준다.
