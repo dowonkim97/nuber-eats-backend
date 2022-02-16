@@ -6242,3 +6242,12 @@ message: "Cannot GET /confirm?code="bla~~bla~~"
 ```
 
 - gmail인 경우 스팸아님으로 해야 클릭이 된다.
+
+```
+          const loginUser = await this.usersService.findById(decoded['id']);
+          // console.log(user);
+          // 사용자(user)에게 요청(request)한다.
+          req['user'] = loginUser.user;
+```
+
+- 위 코드도 추가해줬다.
