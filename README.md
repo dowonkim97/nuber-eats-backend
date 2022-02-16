@@ -6107,3 +6107,138 @@ a href="http://127.0.0.1:3000/confirm?code={{code}}"
 ```
 
 - mail.service.ts에서 template, v:code, v:username 추가해준다.
+
+# #6.9
+
+```
+
+export interface EmailVar {
+  key: string;
+  value: string;
+}
+
+```
+
+- mail.interfaces.ts에서 EmailVar를 만들어준다.
+
+```
+private async sendEmail(
+    subject: string,
+    template: string,
+    emailVars: EmailVar[],
+  ) {
+    const form = new FormData();
+    form.append('from', `Do Won <mailgun@${this.options.domain}>`);
+    form.append('to', `${this.options.fromEmail}`);
+    form.append('subject', subject);
+    form.append('template', template);
+    // 자바스크립트 키워드인 var 대신 emailVar를 사용한다.
+    emailVars.forEach((emailVar) => form.append(emailVar.key, emailVar.value));
+    try {
+      await got(`https://api.mailgun.net/v3/${this.options.domain}/messages`, {
+        method: 'POST',
+        headers: {
+          // node > Buffer.from(`api:YOUR_API_KEY`).toString(`base64`)
+          // Buffer는 Node.js 에서 제공하는 Binary의 데이터를 담을 수 있는 객체
+          Authorization: `Basic ${Buffer.from(
+            `api:${this.options.apiKey}`,
+          ).toString('base64')}`,
+        },
+        body: form,
+      });
+    } catch (e) {
+      // Quietly fail 에러 있어도 알리지 않음
+      console.log(e);
+    }
+  }
+
+  sendVerificationEmail(email: string, code: string) {
+    this.sendEmail('이메일 인증', 'verify-email', [
+      { key: 'code', value: code },
+      { key: 'username', value: email },
+    ]);
+  }
+```
+
+- mail.service.ts에서 위의 코드를 추가해준다.
+
+```
+@Global()
+```
+
+- mail.module.ts에서 sendVerificationEmail을 전역으로 쓸수있게 @Global() 추가해준다.
+
+```
+    private readonly mailService: MailService,
+```
+
+- users.service.ts에서 MailService를 추가해준다.
+
+```
+ // createAccount sendVerification 사용할 수 있게 추가
+      this.mailService.sendVerificationEmail(user.email, verification.code);
+```
+
+- users.service.ts에서 createAccount에서 sendVerification를 추가해준다.
+
+```
+  // editProfile verification 과 sendVerificationEmail 추가
+        const verification = await this.verifications.save(
+          this.verifications.create({ user }),
+        );
+        this.mailService.sendVerificationEmail(user.email, verification.code);
+```
+
+- users.service.ts에서 editProfile에서 verification과 sendVerification를 추가해준다.
+
+```
+mutation {
+  login(input:{
+    email:"new@abc.com",
+    password: "12345",
+  }) {
+    ok
+    token
+    error
+  }
+}
+```
+
+- localhost:3000/graphql을 통해 로그인 해주고 헤더에 x-jwt 토큰 값을 받아온다.
+
+```
+ DELETE FROM public."verification"
+	WHERE ID=0~20;
+```
+
+- verification 테이블의 모든 자료를 삭제해준다. 나는 20개 이상 지운 것 같다.
+
+```
+mutation {
+	editProfile(input:{
+    email: "good@naver.com"
+  }) {
+    ok
+    error
+  }
+}
+```
+
+- Profile에서 email을 변경해주면 mailgun을 통해 메일이 발송된다.
+
+```
+ sendVerificationEmail(email: string, code: string) {
+    this.sendEmail('이메일 인증', 'signup', [
+      { key: 'code', value: code },
+      { key: 'username', value: email },
+    ]);
+  }
+```
+
+- mail.service.ts에서 verify-email을 signup으로 바꿔주지 않아서 약간 헤맸다.
+
+```
+message: "Cannot GET /confirm?code="bla~~bla~~"
+```
+
+- gmail인 경우 스팸아님으로 해야 클릭이 된다.
