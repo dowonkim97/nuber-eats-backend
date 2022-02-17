@@ -1,13 +1,13 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { NextFunction, Request, Response } from 'express';
-import { UsersService } from 'src/users/users.service';
+import { UserService } from 'src/users/users.service';
 import { JwtService } from './jwt.service';
 
 @Injectable()
 export class JwtMiddleware implements NestMiddleware {
   constructor(
     private readonly jwtService: JwtService,
-    private readonly usersService: UsersService,
+    private readonly userService: UserService,
   ) {} // Injectable일 때만 inject 할 수 있다.
   async use(req: Request, res: Response, next: NextFunction) {
     if ('x-jwt' in req.headers) {
@@ -16,7 +16,7 @@ export class JwtMiddleware implements NestMiddleware {
         const decoded = this.jwtService.verify(token.toString());
         if (typeof decoded === 'object' && decoded.hasOwnProperty('id')) {
           // console.log(decoded.id);
-          const loginUser = await this.usersService.findById(decoded['id']);
+          const loginUser = await this.userService.findById(decoded['id']);
           // console.log(user);
           // 사용자(user)에게 요청(request)한다.
           req['user'] = loginUser.user;

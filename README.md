@@ -6250,4 +6250,66 @@ message: "Cannot GET /confirm?code="bla~~bla~~"
           req['user'] = loginUser.user;
 ```
 
-- 위 코드도 추가해줬다.
+- jwt.middleware.ts에서 위 코드도 추가해줬다.
+
+# #7.0
+
+- users.service.ts 유닛 테스트(UT) 해본다.
+- End-to-End(E2E), Integration Test(IT)도 해야한다. 그리고 resolver에 대해서도 테스트 해본다.
+- npm run test:watch(vscode 터미널)
+- No tests found related to files changed since last commit. 테스트할 파일이 없다고 나온다.
+- users폴더에 users.service.spec.ts test파일을 만들어준다.
+- Your test suite must contain at least one test. 적어도 하나의 테스트가 있어야 한다.
+
+```
+  "jest": {
+    "testRegex": ".*\\.spec\\.ts$",
+  }
+```
+
+- jest가 spec.ts를 찾고 있기 때문에 spec.ts파일이 필요하다.
+
+```
+import { UserService } from 'src/users/users.service';
+private readonly userService: UserService,
+ const loginUser = await this.userService.findById(decoded['id']);
+ req['user'] = loginUser.user;
+```
+
+```
+export class UserService {}
+```
+
+- jwt.middleware.ts, users.service.ts 모두 UsersService에서 UserService로 바꿔준다.
+
+```
+import { Test } from '@nestjs/testing';
+import { UserService } from '../users/users.service';
+
+describe('UserService', () => {
+  let service: UserService;
+
+  beforeAll(async () => {
+    // testing module을 만든다.
+    const module = await Test.createTestingModule({
+      providers: [UserService],
+    }).compile();
+    service = module.get<UserService>(UserService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  // users.service.ts 5가지 항목을 테스트 한다.
+  it.todo('createAccount');
+  it.todo('login');
+  it.todo('findById');
+  it.todo('editProfile');
+  it.todo('verifyEmail');
+});
+
+```
+
+- users.service.spec.ts에서는 위와 같이 작성해준다.
+- Cannot find module 'src/common/entities/core.entity' from 'users/entities/users.entity.ts' 모듈을 찾지 못하는 오류가 발생한다.
