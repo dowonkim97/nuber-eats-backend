@@ -11,11 +11,11 @@ import { LoginInput, LoginOutput } from './dtos/login.dto';
 import { UserProfileInput, UserProfileOutput } from './dtos/user-profile.dto';
 import { VerifyEmailInput, VerifyEmailOutput } from './dtos/verify-email.dto';
 import { User } from './entities/users.entity';
-import { UsersService } from './users.service';
+import { UserService } from './users.service';
 
 @Resolver((of) => User) // of가 function 이거나 없어도 된다.
 export class UsersResolver {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UserService) {}
 
   @Query((returns) => Boolean)
   hi() {

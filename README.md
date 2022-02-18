@@ -6313,3 +6313,110 @@ describe('UserService', () => {
 
 - users.service.spec.ts에서는 위와 같이 작성해준다.
 - Cannot find module 'src/common/entities/core.entity' from 'users/entities/users.entity.ts' 모듈을 찾지 못하는 오류가 발생한다.
+
+# #7.1
+
+- Cannot find module 'src/common/entities/core.entity' from 'users/entities/users.entity.ts' 모듈을 찾지 못하는 오류는 jest가 코드의 경로를 찾지 못해서 발생하는 문제이다.
+
+```
+// jest는 CoreEntity 경로와 같은 형식은 되지 않는다.
+import { CoreEntity } from 'src/common/entities/core.entity';
+```
+
+- users.entity.ts에서 위와 같은 형식은 안된다.
+
+```
+ "jest": {
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1"
+    },
+        "rootDir": "src",
+```
+
+- jest에서 src로 시작하는 게 있으면 rootDir를 찾게되고 rootDir은 src이다.
+
+```
+import { UserService } from './users.service';
+  constructor(private readonly usersService: UserService) {}
+```
+
+- users.resolver.ts usersService에서 userService로 바꾼다.
+
+```
+  providers: [UsersResolver, UserService],
+  exports: [UserService],
+```
+
+- users.module.ts도 마찬가지로 usersService에서 userService로 바꾼다.
+
+- Error: Config validation error: "DB_HOST" is required. "DB_PORT" is required. "DB_USERNAME" is required.
+  "DB_PASSWORD" is required. "DB_NAME" is required. "PRIVATE_KEY" is required. "MAILGUN_API_KEY" is required. "MAILGUN_DOMAIN" is required. "MAILGUN_FROM_EMAIL" is required 요딴 에러메시지로 시작하는 나는 yarn start로 실행시킨 나다. yarn start:dev나 npm run test:watch로 실행시켜라.
+
+```
+// mockRepository는 가짜 레파지토리이다.
+const mockRepository = {
+  // fn()는 가짜 function이다.
+  // users.service.ts에는 findOne, save, create가 있다.
+  findOne: jest.fn(),
+  save: jest.fn(),
+  create: jest.fn(),
+};
+const mockJwtService = {
+  // jwt.service.ts에는 sign, verify가 있다.
+  sign: jest.fn(),
+  verify: jest.fn(),
+};
+// Nest can't resolve dependencies of the UserService (UserRepository, VerificationRepository, JwtService, ?). Please make sure that the argument MailService at index [3] is available in the RootTestModule context.
+const mockMailService = {
+  // mail.service.ts에는 sendVerificationEmail가 있다.
+  sendVerificationEmail: jest.fn(),
+};
+describe('UserService', () => {
+  let service: UserService;
+
+  beforeAll(async () => {
+    // testing module을 만든다.
+    const module = await Test.createTestingModule({
+      providers: [
+        // 진짜 userService를 호출함. 아래는 가짜 Mock임.
+        UserService,
+        // users.service에서 진짜 (User) Repository를 불러오는 것이 아니라, Mock Repository를 제공함
+        // Mock은 UserService만 단독으로 테스트 하기 위해 가짜 function, class 실행
+        // useValue는 가짜 값이다.
+        // TypeOrm에게 거짓말한다.
+        { provide: getRepositoryToken(User), useValue: mockRepository },
+        // Nest can't resolve dependencies of the UserService (UserRepository, ?, JwtService, MailService). Please make sure that the argument VerificationRepository at index [1] is available in the RootTestModule context.
+        { provide: getRepositoryToken(Verification), useValue: mockRepository },
+        // Nest can't resolve dependencies of the UserService (UserRepository, VerificationRepository, ?, MailService). Please make sure that the argument JwtService at index [2] is available in the RootTestModule context.
+        { provide: JwtService, useValue: mockJwtService },
+        { provide: MailService, useValue: mockMailService },
+      ],
+    }).compile();
+    service = module.get<UserService>(UserService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  // users.service.ts 5가지 항목을 테스트 한다.
+  it.todo('createAccount');
+  it.todo('login');
+  it.todo('findById');
+  it.todo('editProfile');
+  it.todo('verifyEmail');
+});
+```
+
+- users.service.spec.ts에서 위와 같이 해준다.
+- mockRepository는 가짜 레파지토리이다. 
+- fn()는 가짜 function이다.
+- users.service.ts에는 findOne, save, create가 있다.
+- jwt.service.ts에는 sign, verify가 있다.
+- mail.service.ts에는 sendVerificationEmail가 있다.
+- 진짜 userService를 호출함. 아래는 가짜 Mock임.
+- users.service에서 진짜 (User) Repository를 불러오는 것이 아니라, Mock Repository를 제공함
+- Mock은 UserService만 단독으로 테스트 하기 위해 가짜 function, class 실행
+- useValue는 가짜 값이다.
+- TypeOrm에게 거짓말한다.
+- 다음으로는 createAccount를 테스트해준다.
