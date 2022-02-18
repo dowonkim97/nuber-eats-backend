@@ -6409,7 +6409,7 @@ describe('UserService', () => {
 ```
 
 - users.service.spec.ts에서 위와 같이 해준다.
-- mockRepository는 가짜 레파지토리이다. 
+- mockRepository는 가짜 레파지토리이다.
 - fn()는 가짜 function이다.
 - users.service.ts에는 findOne, save, create가 있다.
 - jwt.service.ts에는 sign, verify가 있다.
@@ -6420,3 +6420,9 @@ describe('UserService', () => {
 - useValue는 가짜 값이다.
 - TypeOrm에게 거짓말한다.
 - 다음으로는 createAccount를 테스트해준다.
+- 갑자기 'module name'에 대한 선언 파일을 찾을 수 없습니다. 라는 메시지의 에러가 뜨는 문제가 발생했다.
+```
+    "typeRoots": ["./@types", "./node_modules/@types"]
+```
+- 위 코드 추가해줌
+- https://velog.io/@hyunjoong/%ED%83%80%EC%9E%85%EC%8A%A4%ED%81%AC%EB%A6%BD%ED%8A%B8-%EB%AA%A8%EB%93%88-%EC%97%90-%EB%8C%80%ED%95%9C-%EC%84%A0%EC%96%B8-%ED%8C%8C%EC%9D%BC%EC%9D%84-%EC%B0%BE%EC%9D%84-%EC%88%98-%EC%97%86%EC%8A%B5%EB%8B%88%EB%8B%A4 (타입스크립트 해당 형식 선언을 찾을수 없습니다 검색)
