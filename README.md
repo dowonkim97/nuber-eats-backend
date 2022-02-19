@@ -6421,8 +6421,47 @@ describe('UserService', () => {
 - TypeOrm에게 거짓말한다.
 - 다음으로는 createAccount를 테스트해준다.
 - 갑자기 'module name'에 대한 선언 파일을 찾을 수 없습니다. 라는 메시지의 에러가 뜨는 문제가 발생했다.
+
 ```
     "typeRoots": ["./@types", "./node_modules/@types"]
 ```
+
 - 위 코드 추가해줌
 - https://velog.io/@hyunjoong/%ED%83%80%EC%9E%85%EC%8A%A4%ED%81%AC%EB%A6%BD%ED%8A%B8-%EB%AA%A8%EB%93%88-%EC%97%90-%EB%8C%80%ED%95%9C-%EC%84%A0%EC%96%B8-%ED%8C%8C%EC%9D%BC%EC%9D%84-%EC%B0%BE%EC%9D%84-%EC%88%98-%EC%97%86%EC%8A%B5%EB%8B%88%EB%8B%A4 (타입스크립트 해당 형식 선언을 찾을수 없습니다 검색)
+
+# #7.2
+
+```
+        { provide: getRepositoryToken(User), useValue: mockRepository },
+```
+
+- users.service.spec.ts에서 this.users.findOne와 같은 Response를 속이고, UserRepository를 가져오기 위해 getRepositoryToken이 필요하다.
+
+```
+    usersRepository = module.get(getRepositoryToken(User));
+```
+
+-  users.service.spec.ts에서 usersRepository는 type any이다.
+
+```
+  let usersRepository: MockRepository<User>;
+```
+
+- users.service.spec.ts에서 변수를 만들어준다.
+- MockRepository의 <User>는 findOne, save, create 같은 것이다.
+
+```
+
+type MockRepository<T = any> = Partial<Record<keyof Repository<T>, jest.Mock>>;
+```
+
+- Partial Record Make all properties in T optional
+- Record <"hello", number>Construct a type with a set of properties K of type T
+- Repository의 T는 typeorm의 entity, 모든 키를 가져오는 keyof, T type은 jest.Mock
+- MockRepository는 Repository의 모든 함수를 말한다.
+
+```
+ usersRepository.
+```
+
+-  users.service.spec.ts에서 usersRepository. 하면 모든 함수를 가지고 있고, 모두 가짜 함수다.
