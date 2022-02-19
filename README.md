@@ -6438,12 +6438,6 @@ describe('UserService', () => {
 - users.service.spec.ts에서 this.users.findOne와 같은 Response를 속이고, UserRepository를 가져오기 위해 getRepositoryToken이 필요하다.
 
 ```
-    usersRepository = module.get(getRepositoryToken(User));
-```
-
--  users.service.spec.ts에서 usersRepository는 type any이다.
-
-```
   let usersRepository: MockRepository<User>;
 ```
 
@@ -6451,7 +6445,12 @@ describe('UserService', () => {
 - MockRepository의 <User>는 findOne, save, create 같은 것이다.
 
 ```
+    usersRepository = module.get(getRepositoryToken(User));
+```
 
+- users.service.spec.ts에서 usersRepository는 type any이다.
+
+```
 type MockRepository<T = any> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 ```
 
@@ -6464,4 +6463,4 @@ type MockRepository<T = any> = Partial<Record<keyof Repository<T>, jest.Mock>>;
  usersRepository.
 ```
 
--  users.service.spec.ts에서 usersRepository. 하면 모든 함수를 가지고 있고, 모두 가짜 함수다.
+- users.service.spec.ts에서 usersRepository. 하면 모든 함수를 가지고 있고, 모두 가짜 함수다.
