@@ -34,9 +34,13 @@ export class UserService {
   createAccountInput): Promise<createAccountOutput> {
     try {
       // email을 가지고 있는 지 확인
+      // createAccount는 테스트 할 때 this.users.findOne에 의존한다.
       const exists = await this.users.findOne({ email });
+      // console.log(exists)로 createAccount를 테스트 한다.
+      // console.log(exists);
       // user가 존재한다면, string을 return한다.
       if (exists) {
+        // return {}을 테스트 한 결과 console.log { id: 1, email: 'lalal' } 가 출력된다.
         return {
           ok: false,
           error: '해당 이메일을 가진 사용자가 이미 존재합니다.',
@@ -45,11 +49,13 @@ export class UserService {
       // else면 아무것도 return 하지 않는다.
       // 인스턴스를 만들고 난 뒤 user를 동시에 저장(save)한다.
       // create한 것을 user에 가져온다.
+      // createAccount는 테스트 할 때 this.users.save에 의존한다.
       const user = await this.users.save(
         this.users.create({ email, password, role }),
       );
 
       // verification 생성
+      // createAccount는 테스트 할 때 this.verifications.save에 의존한다.
       const verification = await this.verifications.save(
         this.verifications.create({
           // user를 create하고 save하고 있음

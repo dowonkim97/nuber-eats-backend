@@ -6464,3 +6464,59 @@ type MockRepository<T = any> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 ```
 
 - users.service.spec.ts에서 usersRepository. 하면 모든 함수를 가지고 있고, 모두 가짜 함수다.
+
+# #7.3
+
+```
+const mockRepository = {
+  findOne: jest.fn(),
+  save: jest.fn(),
+  create: jest.fn(),
+};
+```
+
+- users.service.spec.ts에서 mock은 함수의 return 값을 속일 수 있다.
+- findOne, save, create는 DB, SQL 같은 것들을 아무것도 하지 않는다.
+
+```
+  describe('createAccount', () => {
+    it('유저가 존재하면 fail 하게 된다.', async () => {
+      // users.service.ts에서 findOne이 Promise를 반환하기 때문에 mockResolvedValue()는 Promise.resolve(value) 하는 것과 같다.
+      // jest가 findOne 함수를 가로채서 Promise.resolve(value)의 return 값을 속인다.
+      usersRepository.findOne.mockResolvedValue({
+        id: 1,
+        email: 'lalal',
+      });
+      // 테스트 통과 확인하기 위해 const result = 써줌
+      const result = await service.createAccount({
+        email: '',
+        password: '',
+        role: 0,
+      });
+      // 테스트 통과 확인
+      expect(result).toMatchObject({
+        ok: false,
+        error: '해당 이메일을 가진 사용자가 이미 존재합니다.',
+      });
+    });
+  });
+});
+
+```
+
+- users.service.spec.ts에서 위와 같이 테스트 코드를 작성해준다.
+
+```
+    // console.log(exists)로 createAccount를 테스트 한다.
+    // console.log(exists);
+    // user가 존재한다면, string을 return한다.
+      if (exists) {
+        return {
+          ok: false,
+          error: '해당 이메일을 가진 사용자가 이미 존재합니다.',
+        };
+      }
+```
+
+- users.service.spec.ts에서 주석처리한 return {}을 console.log(exists)로 테스트 한 결과 console.log { id: 1, email: 'lalal' } 가 출력된다.
+- 유저가 존재한다고 fake 하게 했다.
