@@ -6520,3 +6520,7 @@ const mockRepository = {
 
 - users.service.spec.ts에서 주석처리한 return {}을 console.log(exists)로 테스트 한 결과 console.log { id: 1, email: 'lalal' } 가 출력된다.
 - 유저가 존재한다고 fake 하게 했다.
+
+# #7.4
+
+- 지금까지 했던 내용을 3.5분 복습했다.
