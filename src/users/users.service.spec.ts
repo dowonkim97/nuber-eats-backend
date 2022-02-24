@@ -8,14 +8,15 @@ import { MailService } from 'src/mail/mail.service';
 import { Repository } from 'typeorm';
 // mockRepository는 가짜 레파지토리이다.
 // mock은 함수의 return 값을 속일 수 있다.
-const mockRepository = {
+// 객체 = {} 대신 함수 = () => ({}) 를 리턴한다.
+const mockRepository = () => ({
   // fn()는 가짜 function이다.
   // users.service.ts에는 findOne, save, create가 있다.
   //  findOne, save, create는 DB, SQL 같은 것들을 아무것도 하지 않는다.
   findOne: jest.fn(),
   save: jest.fn(),
   create: jest.fn(),
-};
+});
 const mockJwtService = {
   // jwt.service.ts에는 sign, verify가 있다.
   sign: jest.fn(),
@@ -46,9 +47,17 @@ describe('UserService', () => {
         // useValue는 가짜 값이다.
         // TypeOrm에게 거짓말한다.
         // this.users.findOne와 같은 Response를 속이고, UserRepository를 가져오기 위해 getRepositoryToken이 필요하다.
-        { provide: getRepositoryToken(User), useValue: mockRepository },
+        {
+          provide: getRepositoryToken(User),
+          // mockRepository()가 함수를 가짐, Verification과 Repository가 달라짐
+          useValue: mockRepository(),
+        },
         // Nest can't resolve dependencies of the UserService (UserRepository, ?, JwtService, MailService). Please make sure that the argument VerificationRepository at index [1] is available in the RootTestModule context.
-        { provide: getRepositoryToken(Verification), useValue: mockRepository },
+        {
+          provide: getRepositoryToken(Verification),
+          // mockRepository()가 함수를 가짐 User과 Repository가 달라짐
+          useValue: mockRepository(),
+        },
         // Nest can't resolve dependencies of the UserService (UserRepository, VerificationRepository, ?, MailService). Please make sure that the argument JwtService at index [2] is available in the RootTestModule context.
         { provide: JwtService, useValue: mockJwtService },
         { provide: MailService, useValue: mockMailService },
@@ -66,6 +75,12 @@ describe('UserService', () => {
 
   // users.service.ts 5가지 항목을 테스트 한다.
   describe('createAccount', () => {
+    // 몇 번이고 사골처럼 우려먹기 위해서 createAccountArgs를 선언해준다.
+    const createAccountArgs = {
+      email: '',
+      password: '',
+      role: 0,
+    };
     it('유저가 존재하면 fail 하게 된다.', async () => {
       // users.service.ts에서 findOne이 Promise를 반환하기 때문에 mockResolvedValue()는 Promise.resolve(value) 하는 것과 같다.
       // jest가 findOne 함수를 가로채서 Promise.resolve(value)의 return 값을 속인다.
@@ -74,16 +89,31 @@ describe('UserService', () => {
         email: 'lalal',
       });
       // 테스트 통과 확인하기 위해 const result = 써줌
-      const result = await service.createAccount({
-        email: '',
-        password: '',
-        role: 0,
-      });
+      const result = await service.createAccount(createAccountArgs);
       // 테스트 통과 확인
       expect(result).toMatchObject({
         ok: false,
         error: '해당 이메일을 가진 사용자가 이미 존재합니다.',
       });
+    });
+    // 함수 자체 테스트
+    it('새로운 사용자를 만들게 한다.', async () => {
+      // findOne 리턴 값을 mock 한다.
+      // 유저가 존재하지 않는 것처럼 보이게 한다.
+      // users.service.ts에 있던 findOne이 유저를 찾지 못하면, if (exist) 부분은 반환하지 않게 된다.
+      usersRepository.findOne.mockReturnValue(undefined);
+      // Received: undefined 에러메시지가 나왔다. users.service.ts에 create의 리턴 값을 mock하지 않았기 때문이다.
+      usersRepository.create.mockReturnValueOnce(createAccountArgs);
+      await service.createAccount(createAccountArgs);
+      // usersRepository.create 함수가 단 한번(1) 불린다(called).
+      // Received number of calls: 2라는 2번 불렸다는 에러메시지가 출력된다.
+      // UserRepository, VerificationRepository가 같은 함수라고 인식되었기 때문이다.
+      expect(usersRepository.create).toHaveBeenCalledTimes(1);
+      // toHaveBeenCalledWith는 모의 함수가 호출되었는지 확인한다.
+      expect(usersRepository.create).toHaveBeenCalledWith(createAccountArgs);
+      // toHaveBeenCalled는 함수가 호출되었는지 확인한다.
+      expect(usersRepository.save).toHaveBeenCalledTimes(1);
+      expect(usersRepository.save).toHaveBeenCalledWith(createAccountArgs);
     });
   });
   it.todo('login');

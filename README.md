@@ -6524,3 +6524,76 @@ const mockRepository = {
 # #7.4
 
 - 지금까지 했던 내용을 3.5분 복습했다.
+
+# #7.5
+
+- npm run test:cov (vscode 터미널)
+- package.json에서 몇 가지 파일을 무시해준다.
+
+```
+    const user = await this.users.save(
+        this.users.create({ email, password, role }),
+      );
+```
+
+- 위 3줄을 테스트할 때, 출력값, users.save를 불러 객체를 리턴하는지 테스트 해볼 수도 있지만 아래와 같이 함수 자체 테스트를 해준다.
+
+```
+ // 함수 자체 테스트
+    it('새로운 사용자를 만들게 한다.', async () => {
+      // findOne 리턴 값을 mock 한다.
+      // 유저가 존재하지 않는 것처럼 보이게 한다.
+      // users.service.ts에 있던 findOne이 유저를 찾지 못하면, if (exist) 부분은 반환하지 않게 된다.
+      usersRepository.findOne.mockReturnValue(undefined);
+      // Received: undefined 에러메시지가 나왔다. users.service.ts에 create의 리턴 값을 mock하지 않았기 때문이다.
+      usersRepository.create.mockReturnValueOnce(createAccountArgs);
+      await service.createAccount(createAccountArgs);
+      // usersRepository.create 함수가 단 한번(1) 불린다(called).
+      // Received number of calls: 2라는 2번 불렸다는 에러메시지가 출력된다.
+      // UserRepository, VerificationRepository가 같은 함수라고 인식되었기 때문이다.
+      expect(usersRepository.create).toHaveBeenCalledTimes(1);
+      // toHaveBeenCalledWith는 모의 함수가 호출되었는지 확인한다.
+      expect(usersRepository.create).toHaveBeenCalledWith(createAccountArgs);
+      // toHaveBeenCalled는 함수가 호출되었는지 확인한다.
+      expect(usersRepository.save).toHaveBeenCalledTimes(1);
+      expect(usersRepository.save).toHaveBeenCalledWith(createAccountArgs);
+    });
+  });
+```
+
+- users.service.ts에서 함수 자체로 users.service.spec.ts를 테스트한다.
+
+```
+  describe('createAccount', () => {
+    // 몇 번이고 사골처럼 우려먹기 위해서 createAccountArgs를 선언해준다.
+    const createAccountArgs = {
+      email: '',
+      password: '',
+      role: 0,
+    };
+```
+
+- 몇 번이고 사골처럼 우려먹기 위해서 createAccountArgs를 선언해준다.
+
+```
+// 객체 = {} 대신 함수 = () => ({}) 를 리턴한다.
+const mockRepository = () => ({
+
+ findOne: jest.fn(),
+  save: jest.fn(),
+  create: jest.fn(),
+});
+```
+
+- 객체 = {} 대신 함수 = () => ({}) 를 리턴한다.
+
+```
+  // mockRepository()가 함수를 가짐, Verification과 Repository가 달라짐
+          useValue: mockRepository(),
+     // mockRepository()가 함수를 가짐 User과 Repository가 달라짐
+          useValue: mockRepository(),
+```
+
+- mockRepository()가 함수를 가짐, Verification과 User의 Repository가 달라진다.
+
+- users.service.ts | 36.66 | 14.28 | 33.33 | 34.48 | 67,79-192 67부터가 테스트가 이상한 것 같다.
