@@ -6528,6 +6528,24 @@ const mockRepository = {
 # #7.5
 
 - npm run test:cov (vscode 터미널)
+
+```
+// 모든 파일을 표시해줌
+"collectCoverageFrom": [
+"**/*.(t|j)s"
+], "
+// service.ts 파일만 표시해줌
+collectCoverageFrom
+": [
+"**/*.service.(t|j)s"
+],
+   "coveragePathIgnorePatterns": [
+      "node_modules",
+      ".entity.ts",
+      ".constants.ts"
+    ]
+```
+
 - package.json에서 몇 가지 파일을 무시해준다.
 
 ```
