@@ -6547,6 +6547,7 @@ collectCoverageFrom
 ```
 
 - package.json에서 몇 가지 파일을 무시해준다.
+- coveragePathIgnorePatterns은 추가 없어도 test 동작되는 것 같음.
 
 ```
     const user = await this.users.save(
@@ -6615,3 +6616,5 @@ const mockRepository = () => ({
 - mockRepository()가 함수를 가짐, Verification과 User의 Repository가 달라진다.
 
 - users.service.ts | 36.66 | 14.28 | 33.33 | 34.48 | 67,79-192 67부터가 테스트가 이상한 것 같다.
+
+- https://www.daleseo.com/jest-fn-spy-on/ (jest 모킹 검색)

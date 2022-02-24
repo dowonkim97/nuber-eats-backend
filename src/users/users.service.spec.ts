@@ -101,6 +101,7 @@ describe('UserService', () => {
       // findOne 리턴 값을 mock 한다.
       // 유저가 존재하지 않는 것처럼 보이게 한다.
       // users.service.ts에 있던 findOne이 유저를 찾지 못하면, if (exist) 부분은 반환하지 않게 된다.
+      //  await this.users.findOne()은 하나의 promise를 반환하기 때문에 mockResolvedValue, 그게 아닌 경우 mockReturnValue 반환한다.
       usersRepository.findOne.mockReturnValue(undefined);
       // Received: undefined 에러메시지가 나왔다. users.service.ts에 create의 리턴 값을 mock하지 않았기 때문이다.
       usersRepository.create.mockReturnValueOnce(createAccountArgs);
