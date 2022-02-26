@@ -87,7 +87,7 @@ describe('UserService', () => {
       password: 'dowon.password',
       role: 0,
     };
-    it('유저가 존재하면 fail 하게 된다.', async () => {
+    it('유저가 존재하면 실패시켜야 한다.', async () => {
       // users.service.ts에서 findOne이 Promise를 반환하기 때문에 mockResolvedValue()는 Promise.resolve(value) 하는 것과 같다.
       // jest가 findOne 함수를 가로채서 Promise.resolve(value)의 return 값을 속인다.
       usersRepository.findOne.mockResolvedValue({
@@ -157,8 +157,41 @@ describe('UserService', () => {
       );
       expect(result).toEqual({ ok: true });
     });
+
+    it('예외가 발생하면 실패시켜야 한다', async () => {
+      // findOne은 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
+      // 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
+      usersRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.createAccount(createAccountArgs);
+      // result log = { ok: false, error: '계정을 생성할 수 없습니다.' }
+      console.log(result);
+      expect(result).toEqual({
+        ok: false,
+        error: '계정을 생성할 수 없습니다.',
+      });
+    });
   });
-  it.todo('login');
+  describe('login', () => {
+    const loginArgs = {
+      email: 'dowon@email.com',
+      password: 'dowon.paasword',
+    };
+    it('사용자가 존재하지 않으면 실패시켜야 한다.', async () => {
+      // null = doesn't exist
+      usersRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.login(loginArgs);
+      expect(usersRepository.findOne).toHaveBeenCalledTimes(1);
+      expect(usersRepository.findOne).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(result).toEqual({
+        ok: false,
+        error: '사용자를 찾을 수 없습니다.',
+      });
+    });
+  });
   it.todo('findById');
   it.todo('editProfile');
   it.todo('verifyEmail');

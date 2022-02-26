@@ -6703,5 +6703,74 @@ const createAccountArgs = {
   });
 
 ```
+
 - users.service.ts에서 user.email, verification.code에서 email과 code를 string으로 call한다고 작성한다.
 
+# #7.7
+
+```
+      const user = await this.users.findOne(
+        { email },
+        { select: ['id', 'password'] },
+      );
+      // user가 존재하지 않는다면
+      if (!user) {
+        return {
+          ok: false,
+          error: '사용자를 찾을 수 없습니다.',
+        };
+      }
+```
+
+- users.service.ts에서 위 부분을 테스트해준다.
+
+```
+    it('예외가 발생하면 실패시켜야 한다', async () => {
+      // findOne은 await가 fail하게 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
+      // 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
+      usersRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.createAccount(createAccountArgs);
+      // result log = { ok: false, error: '계정을 생성할 수 없습니다.' }
+      console.log(result);
+      expect(result).toEqual({
+        ok: false,
+        error: '계정을 생성할 수 없습니다.',
+      });
+    });
+  });
+  describe('login', () => {
+    const loginArgs = {
+      email: 'dowon@email.com',
+      password: 'dowon.paasword',
+    };
+    it('사용자가 존재하지 않으면 실패시켜야 한다.', async () => {
+      // null = doesn't exist
+      usersRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.login(loginArgs);
+      expect(usersRepository.findOne).toHaveBeenCalledTimes(1);
+      expect(usersRepository.findOne).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(result).toEqual({
+        ok: false,
+        error: '사용자를 찾을 수 없습니다.',
+      });
+    });
+  });
+```
+
+- users.service.spec.ts에서 users.service.ts의 login 부분을 테스트 해준다.
+
+```
+    it('유저가 존재하면 실패시켜야 한다.', async () => {
+
+    it('새로운 사용자를 만들게 한다.', async () => {
+
+    it('예외가 발생하면 실패시켜야 한다', async () => {
+
+    it('사용자가 존재하지 않으면 실패시켜야 한다.', async () => {
+```
+
+- expect(jest.fn()).toHaveBeenCalledTimes(expected) Expected number of calls: 1 Received number of calls: 4 에러메시지가 발생한다. 위처럼 4번 call 했기 때문이다.
