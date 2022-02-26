@@ -6629,31 +6629,21 @@ verificationRepository = module.get(getRepositoryToken(Verification));
 - users.service.spec.ts에서 verificationRepository도 추가해준다.
 
 ```
-  let mailService: MailService;
-    mailService = module.get<MailService>(MailService);
-    verificationRepository = module.get(getRepositoryToken(Verification));
-```
-
-- mailService를 추가해준다.
-
-```
-const createAccountArgs = {
-      email: 'dowon@email.com',
-      password: 'dowon.password',
-      role: 0,
-    };
-```
-
-- object로 입력할 시 Expected: Any<String>, Any<Object> Received: "", "code",에러메시지가 출력된다. user object이다.
-
-```
-
       usersRepository.save.mockResolvedValue(createAccountArgs);
 ```
 
 - "user": undefined라는 에러가 발생하기 때문에 추가해준다.
 - 'resolved' emulates returned value by an 'await'한다.
 - 'resolved'는 'await'에 의해 반환된 값을 에뮬레이트합니다.
+- mockResolvedValue(Promise가 resolve하는 값) 함수를 이용하면 가짜 비동기 함수를 만들 수 있습니다.
+
+```
+  let mailService: MailService;
+    mailService = module.get<MailService>(MailService);
+    verificationRepository = module.get(getRepositoryToken(Verification));
+```
+
+- mailService를 추가해준다.
 
 ```
       verificationRepository.create.mockReturnValue({
@@ -6671,12 +6661,6 @@ const createAccountArgs = {
 - Received: "", undefined 오류 메시지가 나왔다. ""는 verification은 code return 해야하고, undefined는 email, password, role을 return 해야 한다.
 
 ```
-      const result = await service.createAccount(createAccountArgs);
-```
-
-- const result = 해준다.
-
-```
       expect(verificationRepository.create).toHaveBeenCalledTimes(1);
       expect(verificationRepository.create).toHaveBeenCalledWith({
         user: createAccountArgs,
@@ -6687,6 +6671,7 @@ const createAccountArgs = {
       });
 ```
 
+- users.service.ts에서 user.email, verification.code에서 email과 code를 string으로 call한다고 작성한다.
 - toHaveBeenCalledWith에서 user는 users.service.ts에서 this.verifications.create({user})를 하고 있기 때문에 user를 object로 주고, createAccountArgs를 call 한다.
 
 ```
@@ -6699,14 +6684,46 @@ const createAccountArgs = {
         // expect.any(Object),
         expect.any(String),
       );
-      expect(result).toEqual({ ok: true });
-  });
-
 ```
 
-- users.service.ts에서 user.email, verification.code에서 email과 code를 string으로 call한다고 작성한다.
+- expect.any(Object)로 입력할 시 Expected: Any<String>, Any<Object> Received: "", "code",에러메시지가 출력된다. user object이다.
+
+```
+const createAccountArgs = {
+      email: 'dowon@email.com',
+      password: 'dowon.password',
+      role: 0,
+    };
+```
+
+- createAccountArgs에서 email과 password를 입력한다.
+
+```
+  const result = await service.createAccount(createAccountArgs);
+  expect(result).toEqual({ ok: true });
+```
+
+- const result = 해준다. result 부분을 처리해준다.
 
 # #7.7
+
+```
+    it('예외가 발생하면 실패시켜야 한다', async () => {
+      usersRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.createAccount(createAccountArgs);
+      // result log = { ok: false, error: '계정을 생성할 수 없습니다.' }
+      console.log(result);
+      expect(result).toEqual({
+        ok: false,
+        error: '계정을 생성할 수 없습니다.',
+      });
+    });
+  });
+```
+
+- createAccount 예외 발생 시 실패처리를 해준다.
+- findOne은 await가 fail하게 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
+- 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
 
 ```
       const user = await this.users.findOne(
@@ -6725,19 +6742,6 @@ const createAccountArgs = {
 - users.service.ts에서 위 부분을 테스트해준다.
 
 ```
-    it('예외가 발생하면 실패시켜야 한다', async () => {
-      // findOne은 await가 fail하게 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
-      // 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
-      usersRepository.findOne.mockRejectedValue(new Error());
-      const result = await service.createAccount(createAccountArgs);
-      // result log = { ok: false, error: '계정을 생성할 수 없습니다.' }
-      console.log(result);
-      expect(result).toEqual({
-        ok: false,
-        error: '계정을 생성할 수 없습니다.',
-      });
-    });
-  });
   describe('login', () => {
     const loginArgs = {
       email: 'dowon@email.com',
