@@ -36,6 +36,8 @@ describe('UserService', () => {
   let service: UserService;
   // MockRepository의 <User>는 findOne, save, create 같은 것이다.
   let usersRepository: MockRepository<User>;
+  let verificationRepository: MockRepository<Verification>;
+  let mailService: MailService;
   beforeAll(async () => {
     // testing module을 만든다.
     const module = await Test.createTestingModule({
@@ -55,7 +57,7 @@ describe('UserService', () => {
         // Nest can't resolve dependencies of the UserService (UserRepository, ?, JwtService, MailService). Please make sure that the argument VerificationRepository at index [1] is available in the RootTestModule context.
         {
           provide: getRepositoryToken(Verification),
-          // mockRepository()가 함수를 가짐 User과 Repository가 달라짐
+          // mockRepository()가 함수를 가짐 User와 Repository가 달라짐
           useValue: mockRepository(),
         },
         // Nest can't resolve dependencies of the UserService (UserRepository, VerificationRepository, ?, MailService). Please make sure that the argument JwtService at index [2] is available in the RootTestModule context.
@@ -64,8 +66,10 @@ describe('UserService', () => {
       ],
     }).compile();
     service = module.get<UserService>(UserService);
+    mailService = module.get<MailService>(MailService);
     // usersRepository는 any
     usersRepository = module.get(getRepositoryToken(User));
+    verificationRepository = module.get(getRepositoryToken(Verification));
   });
 
   // usersRepository. 하면 모든 함수를 가지고 있고, 모두 가짜 함수다.
@@ -77,8 +81,10 @@ describe('UserService', () => {
   describe('createAccount', () => {
     // 몇 번이고 사골처럼 우려먹기 위해서 createAccountArgs를 선언해준다.
     const createAccountArgs = {
-      email: '',
-      password: '',
+      // Expected: Any<String>, Any<Object> Received: "", "code"
+      // user object
+      email: 'dowon@email.com',
+      password: 'dowon.password',
       role: 0,
     };
     it('유저가 존재하면 fail 하게 된다.', async () => {
@@ -105,16 +111,51 @@ describe('UserService', () => {
       usersRepository.findOne.mockReturnValue(undefined);
       // Received: undefined 에러메시지가 나왔다. users.service.ts에 create의 리턴 값을 mock하지 않았기 때문이다.
       usersRepository.create.mockReturnValueOnce(createAccountArgs);
-      await service.createAccount(createAccountArgs);
+      // "user": undefined라는 에러가 발생하기 때문에 추가해준다.
+      // 'resolved' emulates returned value by an 'await'
+      // 'resolved'는 'await'에 의해 반환된 값을 에뮬레이트합니다.
+      usersRepository.save.mockResolvedValue(createAccountArgs);
+      // users.service.ts에서 verificationRepository.create가 verification를 return하고, user를 가지고 있다.
+      verificationRepository.create.mockReturnValue({
+        user: createAccountArgs,
+      });
+      // users.service.ts에서 verifications.save가 아무것도 return 하지 않는다.
+      // Received: "", undefined 오류 메시지가 나왔다. ""는 verification은 code return 해야하고, undefined는 email, password, role을 return 해야 한다.
+      verificationRepository.save.mockResolvedValue({ code: 'code' });
+      // const result = 해준다.
+      const result = await service.createAccount(createAccountArgs);
       // usersRepository.create 함수가 단 한번(1) 불린다(called).
       // Received number of calls: 2라는 2번 불렸다는 에러메시지가 출력된다.
       // UserRepository, VerificationRepository가 같은 함수라고 인식되었기 때문이다.
       expect(usersRepository.create).toHaveBeenCalledTimes(1);
       // toHaveBeenCalledWith는 모의 함수가 호출되었는지 확인한다.
       expect(usersRepository.create).toHaveBeenCalledWith(createAccountArgs);
+
       // toHaveBeenCalled는 함수가 호출되었는지 확인한다.
       expect(usersRepository.save).toHaveBeenCalledTimes(1);
       expect(usersRepository.save).toHaveBeenCalledWith(createAccountArgs);
+
+      expect(verificationRepository.create).toHaveBeenCalledTimes(1);
+      expect(verificationRepository.create).toHaveBeenCalledWith({
+        // users.service.ts에서 this.verifications.create({user})를 하고 있기 때문에 user를 object로 주고, createAccountArgs를 call 한다.
+        user: createAccountArgs,
+      });
+      expect(verificationRepository.save).toHaveBeenCalledTimes(1);
+      expect(verificationRepository.save).toHaveBeenCalledWith({
+        user: createAccountArgs,
+      });
+
+      // users.service.ts에서 user.email, verification.code에서 email과 code를 string으로 call한다고 작성한다.
+      expect(mailService.sendVerificationEmail).toHaveBeenCalledTimes(1);
+      expect(mailService.sendVerificationEmail).toHaveBeenCalledWith(
+        // email
+        expect.any(String),
+        // code
+        // Received: "dowon@email.com", "code" Number of calls: 1
+        // expect.any(Object),
+        expect.any(String),
+      );
+      expect(result).toEqual({ ok: true });
     });
   });
   it.todo('login');

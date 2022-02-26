@@ -6618,3 +6618,90 @@ const mockRepository = () => ({
 - users.service.ts | 36.66 | 14.28 | 33.33 | 34.48 | 67,79-192 67부터가 테스트가 이상한 것 같다.
 
 - https://www.daleseo.com/jest-fn-spy-on/ (jest 모킹 검색)
+
+# #7.6
+
+```
+let verificationRepository: MockRepository<Verification>;
+verificationRepository = module.get(getRepositoryToken(Verification));
+```
+
+- users.service.spec.ts에서 verificationRepository도 추가해준다.
+
+```
+  let mailService: MailService;
+    mailService = module.get<MailService>(MailService);
+    verificationRepository = module.get(getRepositoryToken(Verification));
+```
+
+- mailService를 추가해준다.
+
+```
+const createAccountArgs = {
+      email: 'dowon@email.com',
+      password: 'dowon.password',
+      role: 0,
+    };
+```
+
+- object로 입력할 시 Expected: Any<String>, Any<Object> Received: "", "code",에러메시지가 출력된다. user object이다.
+
+```
+
+      usersRepository.save.mockResolvedValue(createAccountArgs);
+```
+
+- "user": undefined라는 에러가 발생하기 때문에 추가해준다.
+- 'resolved' emulates returned value by an 'await'한다.
+- 'resolved'는 'await'에 의해 반환된 값을 에뮬레이트합니다.
+
+```
+      verificationRepository.create.mockReturnValue({
+        user: createAccountArgs,
+      });
+```
+
+- users.service.ts에서 verificationRepository.create가 verification를 return하고, user를 가지고 있다.
+
+```
+      verificationRepository.save.mockResolvedValue({ code: 'code' });
+```
+
+- users.service.ts에서 verifications.save가 아무것도 return 하지 않는다.
+- Received: "", undefined 오류 메시지가 나왔다. ""는 verification은 code return 해야하고, undefined는 email, password, role을 return 해야 한다.
+
+```
+      const result = await service.createAccount(createAccountArgs);
+```
+
+- const result = 해준다.
+
+```
+      expect(verificationRepository.create).toHaveBeenCalledTimes(1);
+      expect(verificationRepository.create).toHaveBeenCalledWith({
+        user: createAccountArgs,
+      });
+      expect(verificationRepository.save).toHaveBeenCalledTimes(1);
+      expect(verificationRepository.save).toHaveBeenCalledWith({
+        user: createAccountArgs,
+      });
+```
+
+- toHaveBeenCalledWith에서 user는 users.service.ts에서 this.verifications.create({user})를 하고 있기 때문에 user를 object로 주고, createAccountArgs를 call 한다.
+
+```
+      expect(mailService.sendVerificationEmail).toHaveBeenCalledTimes(1);
+      expect(mailService.sendVerificationEmail).toHaveBeenCalledWith(
+        // email
+        expect.any(String),
+        // code
+        // Received: "dowon@email.com", "code" Number of calls: 1
+        // expect.any(Object),
+        expect.any(String),
+      );
+      expect(result).toEqual({ ok: true });
+  });
+
+```
+- users.service.ts에서 user.email, verification.code에서 email과 code를 string으로 call한다고 작성한다.
+

@@ -65,7 +65,7 @@ export class UserService {
       // sendVerification 사용할 수 있게 추가
       this.mailService.sendVerificationEmail(user.email, verification.code);
       return { ok: true };
-    } catch (e) {
+    } catch (error) {
       // 에러가 있으면 string을 return한다.
       return { ok: false, error: '계정을 생성할 수 없습니다.' };
     }
