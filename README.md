@@ -6778,3 +6778,98 @@ const createAccountArgs = {
 ```
 
 - expect(jest.fn()).toHaveBeenCalledTimes(expected) Expected number of calls: 1 Received number of calls: 4 에러메시지가 발생한다. 위처럼 4번 call 했기 때문이다.
+
+# #7.8
+
+```
+  usersRepository.findOne.mockResolvedValue({
+  usersRepository.findOne.mockReturnValue(undefined);
+  usersRepository.findOne.mockRejectedValue(new Error());
+  usersRepository.findOne.mockResolvedValue(null);
+```
+
+- expect(jest.fn()).toHaveBeenCalledTimes(expected) Expected number of calls: 1 Received number of calls: 4 에러메시지가 발생한다. findOne을 호출했기 때문이다.
+
+- beforeAll이라는 module이 모든 테스트 전에 만들어진 것이다. 모든 테스트에서 기본적으로 동일한 mock들을 공유한다.
+- beforAll function 1,2,3,4 call -> jest memory -> momory remember total 4 call
+
+```
+  beforeEach(async () => {}
+```
+
+- users.service.spec.ts에서 그렇기 때문에 beforeAll -> beforeEach function을 넣어주면 test 모듈이 각 test 전에 다시 만들어진 것이라고 확신할 수 있게 된다.
+- https://stackoverflow.com/questions/54517032/beforeall-vs-beforeeach-when-to-use-them (beforAll beforeEach 언제 사용하는지 검색)
+- beforeAll은 If you're certain that the tests don't make any changes to those conditions, you can use beforeAll (which will run once). 조건을 변경하지 않는다고 확신하는 경우 한 번만 사용한다.
+- beforeEach는 not realizing that one test is changing the setup for the next one. 하나의 테스트가 다음 테스트의 설정을 변경한다는 것을 인식하지 못할 때 사용한다.
+- findOne이 1번 call 된 것을 확인할 수 있다.
+- 보통 유닛 테스팅할 때 beforeEach를 사용하고, E2E(end-to-end) 테스팅할 때는 beforeAll를 사용한다.
+
+```
+ describe('login', () => {
+    const loginArgs = {
+      email: 'dowon@email.com',
+      password: 'dowon.paasword',
+    };
+    it('사용자가 존재하지 않으면 실패시켜야 한다.', async () => {
+      // null = doesn't exist
+      usersRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.login(loginArgs);
+      expect(usersRepository.findOne).toHaveBeenCalledTimes(1);
+      expect(usersRepository.findOne).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(result).toEqual({
+        ok: false,
+        error: '사용자를 찾을 수 없습니다.',
+      });
+    });
+    it('비밀번호가 틀리면 실패시켜야 한다.', async () => {
+      // users.findOne return value를 mock한다.
+      const mockedUser = {
+        id: 1,
+        // mockResolvedValue와 같이 Promise를 return하는 mock function이다.
+        // await mockedUser.checkPassword call -> true가 나온다.
+        // fn = Creates a mock function. Optionally takes a mock implementation.
+        checkPassword: jest.fn(() => Promise.resolve(false)), // true -> false로 패스워드 틀리다고 변경
+      };
+      // if(!user)는 실행되지 않고, passwordCorrect가 실행된다.
+      usersRepository.findOne.mockResolvedValue(mockedUser);
+      const result = await service.login(loginArgs);
+      // result log = { ok: false, error: '잘못된 비밀번호입니다.' }
+      // console.log(result);
+      expect(result).toEqual({
+        ok: false,
+        error: '잘못된 비밀번호입니다.',
+      });
+    });
+    // user.id로 token을 sign, get 해야 한다.
+    it('패스워드가 일치하면 토큰을 통과시켜야 한다.', async () => {
+      const mockedUser = {
+        id: 1,
+        // Received number of calls: 0 에러메시지 발생 시 Promise.resolve(true))로 작성
+        checkPassword: jest.fn(() => Promise.resolve(true)), // false -> true로 패스워드 맞다고 변경
+      };
+      usersRepository.findOne.mockResolvedValue(mockedUser);
+      const result = await service.login(loginArgs);
+      // result log = { ok: true, token: 'signed-token-omg' }
+      // console.log(result);
+      // expect를 사용해서 jwtService user.id를 Number와 함께 call한다.
+      expect(jwtService.sign).toHaveBeenCalledTimes(1);
+      expect(jwtService.sign).toHaveBeenCalledWith(expect.any(Number));
+      expect(result).toEqual({ ok: true, token: 'signed-token-omg' });
+    });
+    it('예외가 발생하면 실패시켜야 한다', async () => {
+      // findOne은 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
+      // 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
+      usersRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.login(loginArgs);
+      // result log = { ok: false, error: '로그인을 할 수 없습니다.' }
+      console.log(result);
+      expect(result).toEqual({ ok: false, error: '로그인을 할 수 없습니다.' });
+    });
+  });
+```
+
+- users.service.spec.ts에서 login test를 했다. 계속하니까 익숙해지는 것 같다.

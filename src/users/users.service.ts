@@ -97,7 +97,8 @@ export class UserService {
           error: '잘못된 비밀번호입니다.',
         };
       }
-      console.log(user);
+      // console.log(user);
+
       // 누구든 token을 못보게 user ID만 넣어준다.
       // process.env.SECRET_KEY로 해도 괜찮지만, nethjs 방식이 아니다.
       const token = this.jwtService.sign(user.id);
@@ -108,7 +109,7 @@ export class UserService {
     } catch (error) {
       return {
         ok: false,
-        error,
+        error: '로그인을 할 수 없습니다.',
       };
     }
   }

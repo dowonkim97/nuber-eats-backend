@@ -19,7 +19,8 @@ const mockRepository = () => ({
 });
 const mockJwtService = {
   // jwt.service.ts에는 sign, verify가 있다.
-  sign: jest.fn(),
+  // jwtService.sign을 mock하려고 하는데 이미 존재하기 때문에 mock implementation 한다.
+  sign: jest.fn(() => 'signed-token-omg'),
   verify: jest.fn(),
 };
 // Partial <Record> Make all properties in T optional
@@ -38,7 +39,8 @@ describe('UserService', () => {
   let usersRepository: MockRepository<User>;
   let verificationRepository: MockRepository<Verification>;
   let mailService: MailService;
-  beforeAll(async () => {
+  let jwtService: JwtService;
+  beforeEach(async () => {
     // testing module을 만든다.
     const module = await Test.createTestingModule({
       providers: [
@@ -67,6 +69,7 @@ describe('UserService', () => {
     }).compile();
     service = module.get<UserService>(UserService);
     mailService = module.get<MailService>(MailService);
+    jwtService = module.get<JwtService>(JwtService);
     // usersRepository는 any
     usersRepository = module.get(getRepositoryToken(User));
     verificationRepository = module.get(getRepositoryToken(Verification));
@@ -114,6 +117,7 @@ describe('UserService', () => {
       // "user": undefined라는 에러가 발생하기 때문에 추가해준다.
       // 'resolved' emulates returned value by an 'await'
       // 'resolved'는 'await'에 의해 반환된 값을 에뮬레이트합니다.
+      // Simple sugar function for: jest.fn().mockImplementation(() => Promise.resolve(value));
       usersRepository.save.mockResolvedValue(createAccountArgs);
       // users.service.ts에서 verificationRepository.create가 verification를 return하고, user를 가지고 있다.
       verificationRepository.create.mockReturnValue({
@@ -164,7 +168,7 @@ describe('UserService', () => {
       usersRepository.findOne.mockRejectedValue(new Error());
       const result = await service.createAccount(createAccountArgs);
       // result log = { ok: false, error: '계정을 생성할 수 없습니다.' }
-      console.log(result);
+      // console.log(result);
       expect(result).toEqual({
         ok: false,
         error: '계정을 생성할 수 없습니다.',
@@ -190,6 +194,50 @@ describe('UserService', () => {
         ok: false,
         error: '사용자를 찾을 수 없습니다.',
       });
+    });
+    it('비밀번호가 틀리면 실패시켜야 한다.', async () => {
+      // users.findOne return value를 mock한다.
+      const mockedUser = {
+        id: 1,
+        // mockResolvedValue와 같이 Promise를 return하는 mock function이다.
+        // await mockedUser.checkPassword call -> true가 나온다.
+        // fn = Creates a mock function. Optionally takes a mock implementation.
+        checkPassword: jest.fn(() => Promise.resolve(false)), // true -> false로 패스워드 틀리다고 변경
+      };
+      // if(!user)는 실행되지 않고, passwordCorrect가 실행된다.
+      usersRepository.findOne.mockResolvedValue(mockedUser);
+      const result = await service.login(loginArgs);
+      // result log = { ok: false, error: '잘못된 비밀번호입니다.' }
+      // console.log(result);
+      expect(result).toEqual({
+        ok: false,
+        error: '잘못된 비밀번호입니다.',
+      });
+    });
+    // user.id로 token을 sign, get 해야 한다.
+    it('패스워드가 일치하면 토큰을 통과시켜야 한다.', async () => {
+      const mockedUser = {
+        id: 1,
+        // Received number of calls: 0 에러메시지 발생 시 Promise.resolve(true))로 작성
+        checkPassword: jest.fn(() => Promise.resolve(true)), // false -> true로 패스워드 맞다고 변경
+      };
+      usersRepository.findOne.mockResolvedValue(mockedUser);
+      const result = await service.login(loginArgs);
+      // result log = { ok: true, token: 'signed-token-omg' }
+      // console.log(result);
+      // expect를 사용해서 jwtService user.id를 Number와 함께 call한다.
+      expect(jwtService.sign).toHaveBeenCalledTimes(1);
+      expect(jwtService.sign).toHaveBeenCalledWith(expect.any(Number));
+      expect(result).toEqual({ ok: true, token: 'signed-token-omg' });
+    });
+    it('예외가 발생하면 실패시켜야 한다', async () => {
+      // findOne은 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
+      // 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
+      usersRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.login(loginArgs);
+      // result log = { ok: false, error: '로그인을 할 수 없습니다.' }
+      console.log(result);
+      expect(result).toEqual({ ok: false, error: '로그인을 할 수 없습니다.' });
     });
   });
   it.todo('findById');
