@@ -6805,26 +6805,6 @@ const createAccountArgs = {
 - 보통 유닛 테스팅할 때 beforeEach를 사용하고, E2E(end-to-end) 테스팅할 때는 beforeAll를 사용한다.
 
 ```
- describe('login', () => {
-    const loginArgs = {
-      email: 'dowon@email.com',
-      password: 'dowon.paasword',
-    };
-    it('사용자가 존재하지 않으면 실패시켜야 한다.', async () => {
-      // null = doesn't exist
-      usersRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.login(loginArgs);
-      expect(usersRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(usersRepository.findOne).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.any(Object),
-      );
-      expect(result).toEqual({
-        ok: false,
-        error: '사용자를 찾을 수 없습니다.',
-      });
-    });
     it('비밀번호가 틀리면 실패시켜야 한다.', async () => {
       // users.findOne return value를 mock한다.
       const mockedUser = {
@@ -6844,32 +6824,58 @@ const createAccountArgs = {
         error: '잘못된 비밀번호입니다.',
       });
     });
-    // user.id로 token을 sign, get 해야 한다.
-    it('패스워드가 일치하면 토큰을 통과시켜야 한다.', async () => {
-      const mockedUser = {
-        id: 1,
-        // Received number of calls: 0 에러메시지 발생 시 Promise.resolve(true))로 작성
-        checkPassword: jest.fn(() => Promise.resolve(true)), // false -> true로 패스워드 맞다고 변경
-      };
-      usersRepository.findOne.mockResolvedValue(mockedUser);
-      const result = await service.login(loginArgs);
-      // result log = { ok: true, token: 'signed-token-omg' }
-      // console.log(result);
-      // expect를 사용해서 jwtService user.id를 Number와 함께 call한다.
-      expect(jwtService.sign).toHaveBeenCalledTimes(1);
-      expect(jwtService.sign).toHaveBeenCalledWith(expect.any(Number));
-      expect(result).toEqual({ ok: true, token: 'signed-token-omg' });
-    });
-    it('예외가 발생하면 실패시켜야 한다', async () => {
-      // findOne은 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
-      // 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
-      usersRepository.findOne.mockRejectedValue(new Error());
-      const result = await service.login(loginArgs);
-      // result log = { ok: false, error: '로그인을 할 수 없습니다.' }
-      console.log(result);
-      expect(result).toEqual({ ok: false, error: '로그인을 할 수 없습니다.' });
-    });
-  });
+```
+
+- users.service.spec.ts에서 비밀번호가 틀리면 실패시키게 처리해준다.
+
+```
+  // user.id로 token을 sign, get 해야 한다.
+  it('패스워드가 일치하면 토큰을 통과시켜야 한다.', async () => {
+  const mockedUser = {
+  id: 1,
+  // Received number of calls: 0 에러메시지 발생 시 Promise.resolve(true))로 작성
+  checkPassword: jest.fn(() => Promise.resolve(true)), // false -> true로 패스워드 맞다고 변경
+  };
+  usersRepository.findOne.mockResolvedValue(mockedUser);
+  const result = await service.login(loginArgs);
+  // result log = { ok: true, token: 'signed-token-omg' }
+  // console.log(result);
+```
+
+- users.service.spec.ts에서 패스워드가 일치하면 토큰을 통과시키게 처리해준다.
+
+```
+const mockJwtService = {
+  sign: jest.fn(() => 'sign-token'),
+  verify: jest.fn(),
+};
+  let jwtService: JwtService;
+  jwtService = module.get<JwtService>(JwtService);
+```
+
+- jwtService도 추가해준다.
+
+```
+// expect를 사용해서 jwtService user.id를 Number와 함께 call한다.
+expect(jwtService.sign).toHaveBeenCalledTimes(1);
+expect(jwtService.sign).toHaveBeenCalledWith(expect.any(Number));
+expect(result).toEqual({ ok: true, token: 'signed-token-omg' });
+```
+
+- jwtService 위의 코드로 처리해준다.
+
+```
+it('예외가 발생하면 실패시켜야 한다', async () => {
+// findOne은 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
+// 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
+usersRepository.findOne.mockRejectedValue(new Error());
+const result = await service.login(loginArgs);
+// result log = { ok: false, error: '로그인을 할 수 없습니다.' }
+console.log(result);
+expect(result).toEqual({ ok: false, error: '로그인을 할 수 없습니다.' });
+});
+});
+
 ```
 
 - users.service.spec.ts에서 login test를 했다. 계속하니까 익숙해지는 것 같다.

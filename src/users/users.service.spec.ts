@@ -231,12 +231,10 @@ describe('UserService', () => {
       expect(result).toEqual({ ok: true, token: 'signed-token-omg' });
     });
     it('예외가 발생하면 실패시켜야 한다', async () => {
-      // findOne은 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
-      // 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
       usersRepository.findOne.mockRejectedValue(new Error());
       const result = await service.login(loginArgs);
       // result log = { ok: false, error: '로그인을 할 수 없습니다.' }
-      console.log(result);
+      // console.log(result);
       expect(result).toEqual({ ok: false, error: '로그인을 할 수 없습니다.' });
     });
   });
