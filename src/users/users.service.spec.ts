@@ -16,6 +16,8 @@ const mockRepository = () => ({
   findOne: jest.fn(),
   save: jest.fn(),
   create: jest.fn(),
+  // TypeError: Cannot read properties of undefined (reading 'mockResolvedValue')
+  findOneOrFail: jest.fn(),
 });
 const mockJwtService = {
   // jwt.service.ts에는 sign, verify가 있다.
@@ -90,7 +92,7 @@ describe('UserService', () => {
       password: 'dowon.password',
       role: 0,
     };
-    it('유저가 존재하면 실패시켜야 한다.', async () => {
+    it('유저가 존재하면 실패하게 한다.', async () => {
       // users.service.ts에서 findOne이 Promise를 반환하기 때문에 mockResolvedValue()는 Promise.resolve(value) 하는 것과 같다.
       // jest가 findOne 함수를 가로채서 Promise.resolve(value)의 return 값을 속인다.
       usersRepository.findOne.mockResolvedValue({
@@ -162,7 +164,7 @@ describe('UserService', () => {
       expect(result).toEqual({ ok: true });
     });
 
-    it('예외가 발생하면 실패시켜야 한다', async () => {
+    it('예외가 발생하면 실패하게 한다', async () => {
       // findOne은 reject한다. users.service.ts에서 exists await이 fail하게 되어 catch 칸으로 이동하게 된다.
       // 즉, createAccount가 { ok: false, error: '계정을 생성할 수 없습니다.' }와 동일하다.
       usersRepository.findOne.mockRejectedValue(new Error());
@@ -180,7 +182,7 @@ describe('UserService', () => {
       email: 'dowon@email.com',
       password: 'dowon.paasword',
     };
-    it('사용자가 존재하지 않으면 실패시켜야 한다.', async () => {
+    it('사용자가 존재하지 않으면 실패하게 한다.', async () => {
       // null = doesn't exist
       usersRepository.findOne.mockResolvedValue(null);
 
@@ -195,7 +197,7 @@ describe('UserService', () => {
         error: '사용자를 찾을 수 없습니다.',
       });
     });
-    it('비밀번호가 틀리면 실패시켜야 한다.', async () => {
+    it('비밀번호가 틀리면 실패하게 한다.', async () => {
       // users.findOne return value를 mock한다.
       const mockedUser = {
         id: 1,
@@ -215,7 +217,7 @@ describe('UserService', () => {
       });
     });
     // user.id로 token을 sign, get 해야 한다.
-    it('패스워드가 일치하면 토큰을 통과시켜야 한다.', async () => {
+    it('패스워드가 일치하면 토큰을 통과하게 한다.', async () => {
       const mockedUser = {
         id: 1,
         // Received number of calls: 0 에러메시지 발생 시 Promise.resolve(true))로 작성
@@ -230,7 +232,7 @@ describe('UserService', () => {
       expect(jwtService.sign).toHaveBeenCalledWith(expect.any(Number));
       expect(result).toEqual({ ok: true, token: 'signed-token-omg' });
     });
-    it('예외가 발생하면 실패시켜야 한다', async () => {
+    it('예외가 발생하면 실패하게 한다', async () => {
       usersRepository.findOne.mockRejectedValue(new Error());
       const result = await service.login(loginArgs);
       // result log = { ok: false, error: '로그인을 할 수 없습니다.' }
@@ -238,7 +240,22 @@ describe('UserService', () => {
       expect(result).toEqual({ ok: false, error: '로그인을 할 수 없습니다.' });
     });
   });
-  it.todo('findById');
-  it.todo('editProfile');
+  describe('findById', () => {
+    const findByIdArgs = { id: 1 };
+    it('사용자가 존재하면 찾게하게 한다.', async () => {
+      usersRepository.findOneOrFail.mockResolvedValue(findByIdArgs);
+      const result = await service.findById(1);
+      expect(result).toEqual({ ok: true, user: findByIdArgs });
+    });
+    it('사용자를 찾지 못하면 실패하게 한다.', async () => {
+      usersRepository.findOneOrFail.mockRejectedValue(new Error());
+      const result = await service.findById(1);
+      expect(result).toEqual({
+        ok: false,
+        error: '사용자를 찾을 수 없습니다.',
+      });
+    });
+  });
+  describe('editProfile', () => {});
   it.todo('verifyEmail');
 });

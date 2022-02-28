@@ -115,18 +115,19 @@ export class UserService {
   }
   async findById(id: number): Promise<UserProfileOutput> {
     try {
-      const user = await this.users.findOne({ id });
-      if (user) {
-        return {
-          ok: true,
-          user: user,
-        };
-      }
+      // findOne -> findOneOrFail로 변경,findOneOrFail은 exception 처리 즉, error를 throw함.
+      const user = await this.users.findOneOrFail({ id });
+      // if (user) {
+      return {
+        ok: true,
+        user: user,
+      };
+      // }
     } catch (error) {
       // user 못 찾으면 여기로 보냄
       return {
         ok: false,
-        error: 'User Not Found',
+        error: '사용자를 찾을 수 없습니다.',
       };
     }
   }

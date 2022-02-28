@@ -6879,3 +6879,52 @@ expect(result).toEqual({ ok: false, error: '로그인을 할 수 없습니다.' 
 ```
 
 - users.service.spec.ts에서 login test를 했다. 계속하니까 익숙해지는 것 같다.
+
+# #7.9
+
+```
+      // findOne -> findOneOrFail로 변경,findOneOrFail은 exception 처리 즉, error를 throw함.
+      const user = await this.users.findOneOrFail({ id });
+      // if (user) {
+      return {
+        ok: true,
+        user: user,
+      };
+      // }
+```
+
+- users.service.ts findById에서 findOne에서 findOneOrFail로 변경해준다.
+
+```
+    usersRepository.findOneOrFail.mockResolvedValue(findByIdArgs);
+```
+
+- TypeError: Cannot read properties of undefined (reading 'mockResolvedValue') 에러메시지가 발생한다. findOneOrFail을 아직 mock하지 않았기 때문이다.
+
+```
+const mockRepository = () => ({
+  // TypeError: Cannot read properties of undefined (reading 'mockResolvedValue')
+  findOneOrFail: jest.fn(),
+});
+
+describe('findById', () => {
+    const findByIdArgs = { id: 1 };
+    it('사용자가 존재하면 찾게하게 한다.', async () => {
+      usersRepository.findOneOrFail.mockResolvedValue(findByIdArgs);
+      const result = await service.findById(1);
+      expect(result).toEqual({ ok: true, user: findByIdArgs });
+    });
+    it('사용자를 찾지 못하면 실패하게 한다.', async () => {
+      usersRepository.findOneOrFail.mockRejectedValue(new Error());
+      const result = await service.findById(1);
+      expect(result).toEqual({
+        ok: false,
+        error: '사용자를 찾을 수 없습니다.',
+      });
+    });
+  });
+```
+
+- users.service.spec.ts에서 findById를 mock해주고 test 해준다.
+
+- https://inpa.tistory.com/entry/JEST-%F0%9F%93%9A-%EB%AA%A8%ED%82%B9-mocking-jestfn-jestspyOn#commentForm (모킹 Mocking 정리 검색)
