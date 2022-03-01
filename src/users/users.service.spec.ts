@@ -256,6 +256,56 @@ describe('UserService', () => {
       });
     });
   });
-  describe('editProfile', () => {});
+  describe('editProfile', () => {
+    it('이메일을 변경하게 한다.', async () => {
+      // oldUser
+      const oldUser = {
+        email: 'dowon@old.com',
+        verified: true,
+      };
+      const editProfileArgs = {
+        userId: 1,
+        input: { email: 'dowon@new.com' },
+      };
+      const newVerification = {
+        code: 'code',
+      };
+      // newUser
+      const newUser = {
+        // shold be called updated user, new enail, verification false
+        verified: false,
+        email: editProfileArgs.input.email,
+      };
+
+      // oldUser를 return한다.
+      usersRepository.findOne.mockResolvedValue(oldUser);
+      // create는 promise를 return하지 않는다. 그러므로 mockReturnValue를 사용했다.
+      verificationRepository.create.mockReturnValue(newVerification);
+      // save는 promise를 return한다. 그러므로 mockResolvedValue를 사용한다.
+      verificationRepository.save.mockResolvedValue(newVerification);
+
+      await service.editProfile(editProfileArgs.userId, editProfileArgs.input);
+      // findOne(userId) call 확인
+      expect(usersRepository.findOne).toHaveBeenCalledTimes(1);
+      expect(usersRepository.findOne).toHaveBeenCalledWith(
+        editProfileArgs.userId,
+      );
+      // "user": Object {} newUser -> {user: newUser}  this.verifications.create({ user }),
+      expect(verificationRepository.create).toHaveBeenCalledWith({
+        user: newUser,
+      });
+      // "user": Object {} newUser -> {user: newUser}  this.verifications.create({ user }),
+      expect(verificationRepository.save).toHaveBeenCalledWith(newVerification);
+
+      // sendVerificationEmail shold be called new email, code
+      expect(mailService.sendVerificationEmail).toHaveBeenCalledWith(
+        // this.mailService.sendVerificationEmail(user.email, verification.code);
+        //Expected: "fdsffd", "code" Received1: "dowon@email.com", "code" 2: "dowon@new.com", "code"
+        //'fdsffd',
+        newUser.email,
+        newVerification.code,
+      );
+    });
+  });
   it.todo('verifyEmail');
 });

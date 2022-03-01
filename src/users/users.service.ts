@@ -134,13 +134,16 @@ export class UserService {
 
   // editProfile에도 verification 생성 가능하게 함
   async editProfile(
+    // editProfile할 때, userId를 보내야 한다.
     userId: number,
     { email, password }: EditProfileInput,
   ): //   ): Promise<User> {
   Promise<EditProfileOutput> {
     try {
+      // oldUser
       const user = await this.users.findOne(userId);
       if (email) {
+        // newUser
         // user email이 변경되면
         user.email = email;
         // user는 verified 되지 않은 상태가 된다.
