@@ -7012,3 +7012,45 @@ describe('findById', () => {
 ```
 
 - users.service.spec.ts에서 editProfile 부분 테스트 진행
+
+# #7.11
+
+```
+useValue: mockJwtService()
+useValue: mockMailService()
+  expect(mailService.sendVerificationEmail).toHaveBeenCalledTimes(1);
+```
+
+- users.service.spec.ts에서 mockMailService, mockJwtService를 () function으로 추가해주고, mailService를 1번 부른다.
+
+```
+ it('비밀번호를 변경하게 한다.', async () => {
+      const editProfileArgs = {
+        userId: 1,
+        input: { password: 'new.password' },
+      };
+      // old password checking
+      usersRepository.findOne.mockResolvedValue({ password: 'old' });
+      const result = await service.editProfile(
+        editProfileArgs.userId,
+        editProfileArgs.input,
+      );
+      // await this.users.save(user);
+      expect(usersRepository.save).toHaveBeenCalledTimes(1);
+      // - "password": "old", + "password": "new.password",
+      // expect(usersRepository.save).toHaveBeenCalledWith({ password: 'old' });
+      // new password checking
+      expect(usersRepository.save).toHaveBeenCalledWith(editProfileArgs.input);
+      expect(result).toEqual({ ok: true });
+    });
+    it('예외가 발생하면 실패하게 한다.', async () => {
+      usersRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.editProfile(1, { email: '12' });
+      expect(result).toEqual({
+        ok: false,
+        error: '프로필을 업데이트 할 수 없습니다.',
+      });
+    });
+```
+
+- users.service.spec.ts에서 비밀번호를 변경하게 한다. 예외가 발생하면 실패하게 한다. 테스트를 진행했다.

@@ -19,22 +19,26 @@ const mockRepository = () => ({
   // TypeError: Cannot read properties of undefined (reading 'mockResolvedValue')
   findOneOrFail: jest.fn(),
 });
-const mockJwtService = {
+// 객체 = {} 대신 함수 = () => ({}) 를 리턴한다.
+const mockJwtService = () => ({
   // jwt.service.ts에는 sign, verify가 있다.
   // jwtService.sign을 mock하려고 하는데 이미 존재하기 때문에 mock implementation 한다.
   sign: jest.fn(() => 'signed-token-omg'),
   verify: jest.fn(),
-};
+});
 // Partial <Record> Make all properties in T optional
 // Record <"hello", number>Construct a type with a set of properties K of type T
 // <Repository의 T는 typeorm의 entity, 모든 키를 가져오는 keyof, <T> type은 jest.Mock
 // MockRepository는 Repository의 모든 함수를 말한다.
 type MockRepository<T = any> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 // Nest can't resolve dependencies of the UserService (UserRepository, VerificationRepository, JwtService, ?). Please make sure that the argument MailService at index [3] is available in the RootTestModule context.
-const mockMailService = {
+
+// 객체 = {} 대신 함수 = () => ({}) 를 리턴한다.
+const mockMailService = () => ({
   // mail.service.ts에는 sendVerificationEmail가 있다.
   sendVerificationEmail: jest.fn(),
-};
+});
+
 describe('UserService', () => {
   let service: UserService;
   // MockRepository의 <User>는 findOne, save, create 같은 것이다.
@@ -65,8 +69,8 @@ describe('UserService', () => {
           useValue: mockRepository(),
         },
         // Nest can't resolve dependencies of the UserService (UserRepository, VerificationRepository, ?, MailService). Please make sure that the argument JwtService at index [2] is available in the RootTestModule context.
-        { provide: JwtService, useValue: mockJwtService },
-        { provide: MailService, useValue: mockMailService },
+        { provide: JwtService, useValue: mockJwtService() },
+        { provide: MailService, useValue: mockMailService() },
       ],
     }).compile();
     service = module.get<UserService>(UserService);
@@ -297,6 +301,7 @@ describe('UserService', () => {
       // "user": Object {} newUser -> {user: newUser}  this.verifications.create({ user }),
       expect(verificationRepository.save).toHaveBeenCalledWith(newVerification);
 
+      expect(mailService.sendVerificationEmail).toHaveBeenCalledTimes(1);
       // sendVerificationEmail shold be called new email, code
       expect(mailService.sendVerificationEmail).toHaveBeenCalledWith(
         // this.mailService.sendVerificationEmail(user.email, verification.code);
@@ -305,6 +310,33 @@ describe('UserService', () => {
         newUser.email,
         newVerification.code,
       );
+    });
+    it('비밀번호를 변경하게 한다.', async () => {
+      const editProfileArgs = {
+        userId: 1,
+        input: { password: 'new.password' },
+      };
+      // old password checking
+      usersRepository.findOne.mockResolvedValue({ password: 'old' });
+      const result = await service.editProfile(
+        editProfileArgs.userId,
+        editProfileArgs.input,
+      );
+      // await this.users.save(user);
+      expect(usersRepository.save).toHaveBeenCalledTimes(1);
+      // - "password": "old", + "password": "new.password",
+      // expect(usersRepository.save).toHaveBeenCalledWith({ password: 'old' });
+      // new password checking
+      expect(usersRepository.save).toHaveBeenCalledWith(editProfileArgs.input);
+      expect(result).toEqual({ ok: true });
+    });
+    it('예외가 발생하면 실패하게 한다.', async () => {
+      usersRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.editProfile(1, { email: '12' });
+      expect(result).toEqual({
+        ok: false,
+        error: '프로필을 업데이트 할 수 없습니다.',
+      });
     });
   });
   it.todo('verifyEmail');
