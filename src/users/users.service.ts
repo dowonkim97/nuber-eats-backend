@@ -192,9 +192,9 @@ export class UserService {
         return { ok: true };
       }
       // throw new Error();
-      return { ok: false, error: '다시 인증해주세요.' };
+      return { ok: false, error: '인증을 찾지 못했습니다.' };
     } catch (error) {
-      return { ok: false, error };
+      return { ok: false, error: '인증하지 못했습니다.' };
     }
   }
 }

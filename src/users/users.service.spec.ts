@@ -18,6 +18,7 @@ const mockRepository = () => ({
   create: jest.fn(),
   // TypeError: Cannot read properties of undefined (reading 'mockResolvedValue')
   findOneOrFail: jest.fn(),
+  delete: jest.fn(),
 });
 // 객체 = {} 대신 함수 = () => ({}) 를 리턴한다.
 const mockJwtService = () => ({
@@ -339,5 +340,42 @@ describe('UserService', () => {
       });
     });
   });
-  it.todo('verifyEmail');
+  describe('verifyEmail', () => {
+    it('이메일을 인증하게 한다.', async () => {
+      // verification need .user, .id
+      const mockVerification = {
+        user: {
+          verified: false,
+        },
+        id: 1,
+      };
+      verificationRepository.findOne.mockResolvedValue(mockVerification);
+      const result = await service.verifyEmail('');
+      expect(verificationRepository.findOne).toHaveBeenCalledTimes(1);
+      // { code }, { relations: ['user'] } = 2 object
+      expect(verificationRepository.findOne).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(usersRepository.save).toHaveBeenCalledTimes(1);
+      // verified = true -> false
+      expect(usersRepository.save).toHaveBeenCalledWith({ verified: true });
+      expect(verificationRepository.delete).toHaveBeenCalledTimes(1);
+      expect(verificationRepository.delete).toHaveBeenCalledWith(
+        mockVerification.id,
+      );
+      expect(result).toEqual({ ok: true });
+    });
+    it('인증을 찾지 못하면 실패하게 한다.', async () => {
+      // findOne을 null -> null return을 mock한다.
+      verificationRepository.findOne.mockResolvedValue(undefined);
+      const result = await service.verifyEmail('');
+      expect(result).toEqual({ ok: false, error: '인증을 찾지 못했습니다.' });
+    });
+    it('예외가 발생하면 실패하게 한다.', async () => {
+      verificationRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.verifyEmail('');
+      expect(result).toEqual({ ok: false, error: '인증하지 못했습니다.' });
+    });
+  });
 });
