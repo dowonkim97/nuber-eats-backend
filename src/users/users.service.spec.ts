@@ -370,7 +370,7 @@ describe('UserService', () => {
       // findOne을 null -> null return을 mock한다.
       verificationRepository.findOne.mockResolvedValue(undefined);
       const result = await service.verifyEmail('');
-      expect(result).toEqual({ ok: false, error: '인증을 찾지 못했습니다.' });
+      expect(result).toEqual({ ok: false, error: '인증을 찾을 수 없습니다.' });
     });
     it('예외가 발생하면 실패하게 한다.', async () => {
       verificationRepository.findOne.mockRejectedValue(new Error());
