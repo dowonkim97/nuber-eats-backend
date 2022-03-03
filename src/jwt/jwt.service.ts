@@ -11,7 +11,7 @@ export class JwtService {
     @Inject(CONFIG_OPTIONS) private readonly options: JwtModuleOptions,
   ) {
     // { privateKey: 'testKey' }
-    console.log(options);
+    // console.log(options);
   }
   sign(userId: number): string {
     console.log(userId);
