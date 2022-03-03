@@ -7103,3 +7103,51 @@ const mockRepository = () => ({
 ```
 
 - users.service.spec.ts에서 verifyEmail을 테스트해준다.
+
+# #8.0
+
+```
+import { Test } from '@nestjs/testing';
+import { CONFIG_OPTIONS } from 'src/common/common.constants';
+import { JwtService } from './jwt.service';
+
+const TEST_KEY = 'testKey';
+describe('JwtService', () => {
+  let service: JwtService;
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      //  CONFIG_OPTIONS at index [0] is available in the RootTestModule context.
+      providers: [
+        JwtService,
+        {
+          provide: CONFIG_OPTIONS,
+          useValue: { privateKey: TEST_KEY },
+        },
+      ],
+    }).compile();
+    service = module.get<JwtService>(JwtService);
+  });
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+  it.todo('sign');
+  it.todo('verify');
+});
+
+```
+
+- jwt.service.spec.ts에서 테스트 setup
+
+```
+export class JwtService {
+  // Nest can't resolve dependencies of the JwtService (?).
+  // dependencies : 서비스가 동작하기 위해 의존해야 한다는 뜻
+  constructor(
+    @Inject(CONFIG_OPTIONS) private readonly options: JwtModuleOptions,
+  ) {
+    // { privateKey: 'testKey' }
+    console.log(options);
+  }
+```
+
+- jwt.service.ts에서 console log로 확인.
