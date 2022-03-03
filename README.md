@@ -7204,6 +7204,80 @@ describe('JwtService', () => {
     });
   });
 });
+describe('verify', () => {
+    it('해독된 토큰을 반환하게 한다.', () => {});
+  });
+});
 ```
 
 - jwt.service.spec.ts sign part test
+
+# #8.2
+
+```
+const TEST_KEY = 'testKey';
+const USER_ID = 1;
+
+// jsonwebtoken mock
+jest.mock('jsonwebtoken', () => {
+  return {
+    // payload { id: userId } should return decoded token
+    verify: jest.fn(() => ({ id: USER_ID })),
+  };
+});
+  describe('verify', () => {
+    it('해독된 토큰을 반환하게 한다.', () => {
+      const TOKEN = 'TOKEN';
+      // string token, string this.options.privateKey
+      const decodedToken = service.verify(TOKEN);
+      expect(decodedToken).toEqual({ id: USER_ID });
+      expect(jwt.verify).toHaveBeenCalledTimes(1);
+      expect(jwt.verify).toHaveBeenCalledWith(TOKEN, TEST_KEY);
+    });
+  });
+});
+```
+
+- jwt.service.spec.ts verify part test
+
+```
+import { Test } from '@nestjs/testing';
+import { CONFIG_OPTIONS } from 'src/common/common.constants';
+import { MailService } from './mail.service';
+// describe, beforeEach, expect = jest auto import
+
+jest.mock('got', () => {});
+jest.mock('form-data', () => {
+  return {
+    append: jest.fn(),
+  };
+});
+
+describe('MailService', () => {
+  let service: MailService;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        MailService,
+        {
+          provide: CONFIG_OPTIONS,
+          useValue: {
+            apiKey: 'test_apiKey',
+            domain: 'test_domain',
+            fromEmail: 'test_fromEmail',
+          },
+        },
+      ],
+    }).compile();
+    service = module.get<MailService>(MailService);
+  });
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+  it.todo('sendEmail');
+  it.todo('sendVerificationEmail');
+});
+```
+
+- mail.service.spec.ts mailservice test setup

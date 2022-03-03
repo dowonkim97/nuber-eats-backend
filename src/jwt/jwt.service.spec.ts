@@ -3,13 +3,18 @@ import * as jwt from 'jsonwebtoken';
 import { CONFIG_OPTIONS } from 'src/common/common.constants';
 import { JwtService } from './jwt.service';
 
+const TEST_KEY = 'testKey';
+const USER_ID = 1;
+
 // jsonwebtoken mock
 jest.mock('jsonwebtoken', () => {
   return {
     sign: jest.fn(() => 'TOKEN'),
+    // payload { id: userId } should return decoded token
+    verify: jest.fn(() => ({ id: USER_ID })),
   };
 });
-const TEST_KEY = 'testKey';
+
 describe('JwtService', () => {
   let service: JwtService;
   beforeEach(async () => {
@@ -30,9 +35,8 @@ describe('JwtService', () => {
   });
   describe('sign', () => {
     it('서명된 토큰을 반환하게 한다.', () => {
-      const ID = 1;
       // { id: userId }, this.options.privateKey;
-      const token = service.sign(ID);
+      const token = service.sign(USER_ID);
       // service.sign return value check
       expect(typeof token).toBe('string');
       // console.log(token); <= result = eyJh~~~ -> TOKEN
@@ -40,13 +44,20 @@ describe('JwtService', () => {
       expect(jwt.sign).toHaveBeenCalledTimes(1);
       expect(jwt.sign).toHaveBeenCalledWith(
         {
-          id: ID,
+          id: USER_ID,
         },
         TEST_KEY,
       );
     });
   });
   describe('verify', () => {
-    it('해독된 토큰을 반환하게 한다.', () => {});
+    it('해독된 토큰을 반환하게 한다.', () => {
+      const TOKEN = 'TOKEN';
+      // string token, string this.options.privateKey
+      const decodedToken = service.verify(TOKEN);
+      expect(decodedToken).toEqual({ id: USER_ID });
+      expect(jwt.verify).toHaveBeenCalledTimes(1);
+      expect(jwt.verify).toHaveBeenCalledWith(TOKEN, TEST_KEY);
+    });
   });
 });
