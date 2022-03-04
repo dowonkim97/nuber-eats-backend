@@ -22,7 +22,15 @@ export class MailService {
   }
 
   // delete private -> test
-  async sendEmail(subject: string, template: string, emailVars: EmailVar[]) {
+  async sendEmail(
+    subject: string,
+    template: string,
+    emailVars: EmailVar[],
+  ): Promise<boolean> {
+    // console log result = got, FormData is mock function
+    // console.log(got);
+    // console.log(FormData);
+    // spyOne append show up after create new formData
     const form = new FormData();
     form.append('from', `Do Won <mailgun@${this.options.domain}>`);
     form.append('to', `${this.options.fromEmail}`);
@@ -33,20 +41,25 @@ export class MailService {
       form.append(`v:${emailVar.key}`, emailVar.value),
     );
     try {
-      await got(`https://api.mailgun.net/v3/${this.options.domain}/messages`, {
-        method: 'POST',
-        headers: {
-          // node > Buffer.from(`api:YOUR_API_KEY`).toString(`base64`)
-          // Buffer는 Node.js 에서 제공하는 Binary의 데이터를 담을 수 있는 객체
-          Authorization: `Basic ${Buffer.from(
-            `api:${this.options.apiKey}`,
-          ).toString('base64')}`,
+      await got.post(
+        `https://api.mailgun.net/v3/${this.options.domain}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            // node > Buffer.from(`api:YOUR_API_KEY`).toString(`base64`)
+            // Buffer는 Node.js 에서 제공하는 Binary의 데이터를 담을 수 있는 객체
+            Authorization: `Basic ${Buffer.from(
+              `api:${this.options.apiKey}`,
+            ).toString('base64')}`,
+          },
+          body: form,
         },
-        body: form,
-      });
+      );
+      return true;
     } catch (e) {
       // Quietly fail 에러 있어도 알리지 않음
-      console.log(e);
+      // console.log(e);
+      return false;
     }
   }
 

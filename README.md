@@ -7281,3 +7281,103 @@ describe('MailService', () => {
 ```
 
 - mail.service.spec.ts mailservice test setup
+
+# #8.3
+
+```
+
+  async sendEmail(subject: string, template: string, emailVars: EmailVar[]) {
+```
+
+- delete private with test
+
+```
+  describe('sendVerificationEmail', () => {
+    it('sendEmail을 호출하게 한다.', () => {
+      // code, email args check
+      const sendVerificationEmailArgs = {
+        email: 'email',
+        code: 'code',
+      };
+      // sendEmail called intercept call, add implementation
+      jest.spyOn(service, 'sendEmail').mockImplementation(async () => {});
+      service.sendVerificationEmail(
+        sendVerificationEmailArgs.email,
+        sendVerificationEmailArgs.code,
+      );
+      expect(service.sendEmail).toHaveBeenCalledTimes(1);
+      expect(service.sendEmail).toHaveBeenCalledWith('이메일 인증', 'signup', [
+        { key: 'code', value: sendVerificationEmailArgs.code },
+        { key: 'username', value: sendVerificationEmailArgs.email },
+      ]);
+    });
+  });
+```
+
+- mail.service.spec.ts sendVerificationEmail, sendVerificationEmail part test
+
+# #8.4
+
+```
+ async sendEmail(
+  ): Promise<boolean>
+
+  try {
+  await got.post(
+     return true;
+    } catch (e) {
+      // console.log(e);
+      return false;
+    }
+```
+
+- mail.service.ts Promise add, try return true, catch return false, got.post change
+
+```
+const TEST_DOMAIN = 'test_domain';
+
+      providers: [
+        {
+          useValue: {
+            domain: TEST_DOMAIN,
+          },
+        },
+      ],
+
+describe('sendEmail', () => {
+    it('이메일 전송', async () => {
+      // Expected number of calls: 1, Received number of calls: 5
+      // service.sendEmail('', '', [{ key: 'one', value: '1' }]);
+      const ok = await service.sendEmail('', '', [
+        { key: 'email', value: 'emailValue' },
+      ]);
+      // form.append called check
+      const formSpy = jest.spyOn(FormData.prototype, 'append');
+      // Expected number of calls: 1, Received number of calls: 4
+      expect(formSpy).toHaveBeenCalledTimes(5);
+      expect(got.post).toHaveBeenCalledTimes(1);
+      // got string, object called check
+      expect(got.post).toHaveBeenCalledWith(
+        `https://api.mailgun.net/v3/${TEST_DOMAIN}/messages`,
+        expect.any(Object),
+      );
+      expect(ok).toEqual(true);
+    });
+    it('오류 발생시 실패', async () => {
+      // sendEamail got.post called, Implementation mocked, error throw
+      jest.spyOn(got, 'post').mockImplementation(() => {
+        throw new Error();
+      });
+      const ok = await service.sendEmail('', '', []);
+      expect(ok).toEqual(false);
+    });
+  });
+});
+```
+
+```
+    // Argument of type '() => Promise<void>' is not assign
+      jest.spyOn(service, 'sendEmail').mockImplementation(async () => true);
+```
+
+- mail.service.spec.ts sendEmail part test
