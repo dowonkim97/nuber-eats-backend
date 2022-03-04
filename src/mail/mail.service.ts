@@ -21,11 +21,8 @@ export class MailService {
     //   });
   }
 
-  private async sendEmail(
-    subject: string,
-    template: string,
-    emailVars: EmailVar[],
-  ) {
+  // delete private -> test
+  async sendEmail(subject: string, template: string, emailVars: EmailVar[]) {
     const form = new FormData();
     form.append('from', `Do Won <mailgun@${this.options.domain}>`);
     form.append('to', `${this.options.fromEmail}`);
@@ -53,6 +50,9 @@ export class MailService {
     }
   }
 
+  // send email called once
+  // sendVerificationEmail didn't return any thing,
+  // string, value current check
   sendVerificationEmail(email: string, code: string) {
     this.sendEmail('이메일 인증', 'signup', [
       { key: 'code', value: code },

@@ -29,9 +29,30 @@ describe('MailService', () => {
     }).compile();
     service = module.get<MailService>(MailService);
   });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
+  describe('sendVerificationEmail', () => {
+    it('sendEmail을 호출하게 한다.', () => {
+      // code, email args check
+      const sendVerificationEmailArgs = {
+        email: 'email',
+        code: 'code',
+      };
+      // sendEmail called intercept call, add implementation
+      jest.spyOn(service, 'sendEmail').mockImplementation(async () => {});
+      service.sendVerificationEmail(
+        sendVerificationEmailArgs.email,
+        sendVerificationEmailArgs.code,
+      );
+      expect(service.sendEmail).toHaveBeenCalledTimes(1);
+      expect(service.sendEmail).toHaveBeenCalledWith('이메일 인증', 'signup', [
+        { key: 'code', value: sendVerificationEmailArgs.code },
+        { key: 'username', value: sendVerificationEmailArgs.email },
+      ]);
+    });
+  });
   it.todo('sendEmail');
-  it.todo('sendVerificationEmail');
 });
