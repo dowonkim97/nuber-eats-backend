@@ -7409,6 +7409,7 @@ describe('UserModule (e2e)', () => {
 - users.e2e-spec.ts에서 Appcontroller를 UserModule로 바꿔준다.
 - npm run test:e2e (vscode 터미널)
 - Cannot find module 'src/common/entities/core.entity' from '../src/users/entities/users.entity.ts' 에러가 발생하게 된다. package.json에서 있던 "moduleNameMapper"를 jest-e2e.json에서 적용하게 한다.
+- beforeEach을 beforeAll로 바꾼다.
 
 ```
  "jest": {
