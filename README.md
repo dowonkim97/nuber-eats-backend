@@ -7381,3 +7381,83 @@ describe('sendEmail', () => {
 ```
 
 - mail.service.spec.ts sendEmail part test
+
+# #9.0
+
+- test 폴더에 users.e2e-spec.ts파일을 만들어준다.
+
+```
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from '../src/app.module';
+
+describe('UserModule (e2e)', () => {
+  let app: INestApplication;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = module.createNestApplication();
+    await app.init();
+  });
+});
+```
+
+- users.e2e-spec.ts에서 Appcontroller를 UserModule로 바꿔준다.
+- npm run test:e2e (vscode 터미널)
+- Cannot find module 'src/common/entities/core.entity' from '../src/users/entities/users.entity.ts' 에러가 발생하게 된다. package.json에서 있던 "moduleNameMapper"를 jest-e2e.json에서 적용하게 한다.
+
+```
+ "jest": {
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1"
+    },
+        "rootDir": "src",
+```
+
+- package.json jest에서 src로 시작하는 게 있으면 rootDir를 찾게되고 rootDir은 src이다.
+
+```
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/../src/$1"
+  }
+```
+
+- test 폴더인 rootDir에서 out한 뒤 src로 들어간다.
+
+- Config validation error: "NODE_ENV" must be one of [dev, prod]. "DB_HOST" is required. "DB_PORT" is required. "DB_USERNAME" is required. "DB_PASSWORD" is required. "DB_NAME" is required. "PRIVATE_KEY" is required. "MAILGUN_API_KEY" is required. "MAILGUN_DOMAIN" is required. "MAILGUN_FROM_EMAIL" is require. joi 문제로 에러가 발생하게 된다.
+
+```
+    validationSchema: Joi.object({
+        NODE_ENV: Joi.string().valid('dev', 'prod', 'test').required(),
+      }),
+```
+
+- app.module.ts에서 'test'를 추가해준다.
+- .env 파일이 로드되지 않았다.
+
+```
+      envFilePath: process.env.NODE_ENV === 'dev' ? '.env.dev' : '.env.test',
+```
+
+- .env.dev와 .env.test의 2가지 옵션이 있는데 npm run test, npm run test:e2e 등을 입력하면 NODE_ENV는 'test'를 입력받아 env.test 파일을 실행시키게 된다. 하지만 env.test 파일이 비어있기 때문에 .env.dev파일을 복붙하여 .env.test에 붙여넣는다.
+- .env.test파일에서 실제 사용자, db, relationship, typeorm sql을 생성하여 e2e 테스트를 위해 DB_NAME=DB_NAME-test, PRIVATE_KEY=testKey로 변경한다.
+- Your test suite must contain at least one test. test폴더 users.e2e-spec.ts에 테스트가 1개도 없다는 에러메시지가 발생한다.
+
+- localhost:3000/graphql DOCS에 있던 QUERIES와 MUTATIONS를 모두 넣고, todo를 만들어준다.
+
+- ERROR connect 127.0.0.1 에러가 발생하면, pgAdmin4로 DB를 켜준다.
+- ERROR [TypeOrmModule] Unable to connect to the database. Retrying (2)... 에러메세지가 발생한다. pgAdmin4로 nuber-eats-test 데이터베이스(db)를 만들어준다.
+
+```
+   logging:
+        process.env.NODE_ENV !== 'prod' && process.env.NODE_ENV !== 'test',
+```
+
+- app.module.ts에서 test할 때, 로깅(logging)을 끈다.
+- coverage 폴더는 cov 결과를 보여주는 html 페이지이다.
+- nuber-eats-backend\coverage\lcov-report에서 index.html을 열면 진행도를 볼 수 있다. 신기신기(singi singi)
+- 이스탄불(istanbul)
