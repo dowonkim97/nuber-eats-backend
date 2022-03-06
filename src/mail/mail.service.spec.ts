@@ -42,6 +42,8 @@ describe('MailService', () => {
         code: 'code',
       };
       // sendEmail called intercept call, add implementation
+      // Matcher error: received value must be a mock or spy functionReceived has type:  function Received has value: [Function sendEmail]
+      // code: 'ERR_UNHANDLED_REJECTION', "TypeError: FormData is not a constructor".
       // Argument of type '() => Promise<void>' is not assign
       jest.spyOn(service, 'sendEmail').mockImplementation(async () => true);
       service.sendVerificationEmail(

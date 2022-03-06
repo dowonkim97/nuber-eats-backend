@@ -41,6 +41,7 @@ export class MailService {
       form.append(`v:${emailVar.key}`, emailVar.value),
     );
     try {
+      // post is jest Implementation mock
       await got.post(
         `https://api.mailgun.net/v3/${this.options.domain}/messages`,
         {
