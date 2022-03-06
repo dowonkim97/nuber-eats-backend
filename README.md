@@ -116,7 +116,7 @@
 - restaurants.resolver.ts 에서 삭제
 
 - nullable은 값형식의 데이터 타입에 Null 값을 넣을수 있도록 해주는 것이다.
-- isGood은 nullable이기 때문에 null이 가능하다. 그렇기 떄문에
+- isGood은 nullable이기 때문에 null이 가능하다. 그렇기 때문에
   http://localhost:3000/graphql DOCS에서 Boolean에 !가 없다.
 
 ```
@@ -7461,3 +7461,31 @@ describe('UserModule (e2e)', () => {
 - coverage 폴더는 cov 결과를 보여주는 html 페이지이다.
 - nuber-eats-backend\coverage\lcov-report에서 index.html을 열면 진행도를 볼 수 있다. 신기신기(singi singi)
 - 이스탄불(istanbul)
+
+# #9.1
+
+- Jest did not exit one second after the test run has completed. 경고(warning)메시지가 뜬다. 뭔가 종료되지 않고 jest가 종료되어서 뜬다.
+
+```
+  afterAll(async () => {
+    await app.close();
+  });
+```
+
+- users.e2e-spec.ts에서 app.init()해주었다. afterAll()으로 app을 종료시키는 코드를 작성해준다.
+- user 생성, 로그인, 프로필 편집, verification, verify 등을 테스트하고, 테스트 끝난 후 DB를 비운다. empty 상태로 만든다.
+- test 끝난 후에 drop database 한다. 즉, 데이터베이스 안의 내용물을 삭제한다.
+- db에는 connection이 필요하다. typeorm은 getConnection이 있다.
+
+- dropDatabase = Drops the database and all its data. Be careful with this method on production since this method will erase all your database tables and their data. Can be used only after connection to the database is established. 데이터베이스와 모든 데이터를 삭제합니다. 이 방법을 사용하면 모든 데이터베이스 테이블과 해당 데이터가 지워지므로 프로덕션 환경에서는 이 방법에 주의하십시오. 데이터베이스 연결이 완료된 후에만 사용할 수 있습니다.
+
+```
+  afterAll(async () => {
+    // after all the test connect, drop database
+    await getConnection().dropDatabase();
+    await app.close();
+  });
+```
+
+- users.e2e-spec.ts에서 getConnection().dropDatabase() 추가해준다.
+- userId는 localhost:3000/graphql에서 float! 타입(type)이 실수니까 어떤 유저(any user)든간 볼 수 있다.
