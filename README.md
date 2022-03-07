@@ -7531,3 +7531,61 @@ const GRAPHQL_ENDPOINT = '/graphql';
 ```
 
 - users.e2e-spec.ts 'createAccount', '계정을 생성하게 한다.' e2e test
+
+# #9.3
+
+- This usually means that there are asynchronous operations that weren't stopped in your tests. Consider running Jest with `--detectOpenHandles` to troubleshoot this issue. 에러 메시지가 생긴다.
+
+```
+    "test:e2e": "jest --config ./test/jest-e2e.json --detectOpenHandles"
+
+```
+
+- package.json에서 "test:e2e"에 --detectOpenHandles를 추가한다.
+
+- 내가 할 때는 got 에러메시지가 출력되지 않았다.
+- 하지만 got 때문에 account를 생성할 때마다 email을 전송하게 되고, 스팸함에 메일이 오게된다.
+
+```
+jest.mock('got', () => {
+  return {
+    post: jest.fn(),
+  };
+});
+```
+
+- got를 mock 해주고, --detectOpenHandles를 삭제한다.
+- 이메일 로그인하여 verification code를 알아낼 방법이 없기 때문에 got를 실제 사용하지는 않는다.
+
+```
+    it('계정이 이미 존재하면 실패하게 한다.', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          // send data
+          // user, verification table create and then goes away
+          query: `mutation {
+            createAccount(input: {
+              email: "${EMAIL}",
+              password:"12345",
+              role: Owner,
+            }) {
+              ok
+              error
+            }
+          }`,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.data.createAccount.ok).toBe(false);
+          // If it should pass with deep equality, replace "toBe" with "toStrictEqual"    Expected: Any<String>, Received: "해당 이메일을 가진 사용자가 이미 존재합니다."
+          expect(res.body.data.createAccount.error).toEqual(expect.any(String));
+          // toBe는 정확한 메시지 입력해야 한다.
+          expect(res.body.data.createAccount.error).toBe(
+            '해당 이메일을 가진 사용자가 이미 존재합니다.',
+          );
+        });
+    });
+  });
+```
+- users.e2e-spec.ts 'createAccount', '계정이 이미 존재하면 실패하게 한다.' e2e test
