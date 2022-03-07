@@ -7490,3 +7490,44 @@ describe('UserModule (e2e)', () => {
 
 - users.e2e-spec.ts에서 getConnection().dropDatabase() 추가해준다.
 - userId는 localhost:3000/graphql에서 float! 타입(type)이 실수니까 어떤 유저(any user)든간 볼 수 있다.
+
+# #9.2
+
+```
+// if Type 'typeof supertest' has no call signatures error import request from 'supertest';
+import * as request from 'supertest';
+// posting /graphql url
+const GRAPHQL_ENDPOINT = '/graphql';
+
+  // resolver, service, typeorm working test
+  describe('createAccount', () => {
+    const EMAIL = 'won@won.com';
+    it('계정을 생성하게 한다.', () => {
+      // using supertest
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          // send data
+          // user, verification table create and then goes away
+          query: `mutation {
+            createAccount(input: {
+              email: "${EMAIL}",
+              password:"12345",
+              role: Owner,
+            }) {
+              ok
+              error
+            }
+          }`,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.data.createAccount.ok).toBe(true);
+          expect(res.body.data.createAccount.error).toBe(null);
+        });
+    });
+  });
+
+```
+
+- users.e2e-spec.ts 'createAccount', '계정을 생성하게 한다.' e2e test
