@@ -7672,3 +7672,143 @@ const testUser = {
 ```
 
 - users.e2e-spec.ts login, 정확한 자격 증명(correct credentials)과 함께 로그인 하게 한다. 잘못된 자격 증명(wrong credentials)과 함께 로그인 할 수 없습니다. e2e test
+
+# #9.5
+
+- userProfile은 로그인만 되어 있으면 user의 프로필, id를 볼 수 있게 해준다. 유저를 찾을 수 있는 경우도 있고, 없는 경우도 있다. found와 non found 여부를 체크해줘야 한다.
+- 어떤 유저 id를 찾아야 하는 지 어떻게 알까?
+  db, user를 create, db drop 하는 것은 첫 user는 ID가 1이라는 뜻이다. db 모두 지우고, 다시 생성하기 때문에 0이 아니라 id가 1이라는 뜻이다.
+
+```
+  const module: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = module.createNestApplication();
+    await app.init();
+```
+
+- users.e2e-spec.ts에서 beforeAll 안에 모듈이 있을 때, 모듈로부터 뭔가를 가져올 수 있다. usersRepository를 가져온다.
+
+```
+  console.log
+    [
+      User {
+        id: 1,
+        createdAt: 2022-03-08T18:24:04.462Z,
+        updatedAt: 2022-03-08T18:24:04.462Z,
+        email: 'won@won.com',
+        role: 1,
+        verified: false
+      }
+    ]
+```
+
+- 첫번째 console.log(await usersRepository.find())로 지금과 같이 db 안 들여다보기, 두번째 ID 1의 user를 그냥 사용하는 방법이 있다.
+
+```
+  let usersRepository: Repository<User>;
+
+ // <Repository<User>> type
+
+    usersRepository = module.get<Repository<User>>(getRepositoryToken(User));
+
+
+  // userProfile think need user, found out id, userId
+  describe('userProfile', () => {
+    let userId: number;
+    // beforeAll the test inside of userProfile
+    beforeAll(async () => {
+      // this will take out first element the array inside a variable called user
+      // console.log(await usersRepository.find());
+      const [user] = await usersRepository.find();
+      // const userId not going to work
+      userId = user.id;
+    });
+    // may not be used in a describe block containing no tests.
+    it('사용자 프로필을 볼 수 있어야 한다.', () => {
+      return (
+        request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          // header set
+          .set(`X-JWT`, jwtToken)
+          .send({
+            query: `
+        {
+          userProfile(userId:${userId}) {
+            error
+            ok
+            user {
+              id
+            }
+          }
+        }
+        `,
+          })
+          .expect(200)
+          .expect((res) => {
+            const {
+              body: {
+                data: {
+                  userProfile: {
+                    ok,
+                    error,
+                    user: { id },
+                  },
+                },
+              },
+            } = res;
+            // { data: { userProfile: { error: null, ok: true, user: [Object] } } }
+            // console.log(res.body);
+            expect(ok).toBe(true);
+            expect(error).toBe(null);
+            expect(id).toBe(userId);
+          })
+      );
+    });
+    it('프로필을 찾을 수 없습니다.', () => {
+      return (
+        request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          // header set
+          .set(`X-JWT`, jwtToken)
+          // userId dosn't exist
+          .send({
+            query: `
+      {
+        userProfile(userId: 999) {
+          error
+          ok
+          user {
+            id
+          }
+        }
+      }
+      `,
+          })
+          .expect(200)
+          .expect((res) => {
+            const {
+              body: {
+                data: {
+                  userProfile: { ok, error, user },
+                },
+              },
+            } = res;
+            // { data: { userProfile: { error: null, ok: true, user: [Object] } } }
+            // console.log(res.body);
+            expect(ok).toBe(false);
+            expect(error).toBe('사용자를 찾을 수 없습니다.');
+            expect(user).toBe(null);
+          })
+      );
+    });
+  });
+```
+
+- users.e2e-spec.ts userProfile, '사용자 프로필을 볼 수 있어야 한다.', '프로필을 찾을 수 없습니다.' e2e test
+
+```
+(userProfile).toEqual({ok:true, user: {id: userId}})
+```
+
+- userprofile 객체를 한 번에 테스트해본다.

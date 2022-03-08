@@ -3,7 +3,9 @@ import { INestApplication } from '@nestjs/common';
 // if Type 'typeof supertest' has no call signatures error import request from 'supertest';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { getConnection } from 'typeorm';
+import { getConnection, Repository } from 'typeorm';
+import { User } from 'src/users/entities/users.entity';
+import { getRepositoryToken } from '@nestjs/typeorm';
 
 jest.mock('got', () => {
   return {
@@ -22,15 +24,18 @@ describe('UserModule (e2e)', () => {
   const graphqlRequest = (query: string) =>
     request(app.getHttpServer()).post(GRAPHQL_ENDPOINT).send({ query });
   let app: INestApplication;
+  let usersRepository: Repository<User>;
   // share token
   let jwtToken: string;
-  // beforeEach 각각 -> beforeAll 모든 test 전에 module을 load
 
+  // beforeEach 각각 -> beforeAll 모든 test 전에 module을 load
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
     app = module.createNestApplication();
+    // <Repository<User>> type
+    usersRepository = module.get<Repository<User>>(getRepositoryToken(User));
     await app.init();
   });
 
@@ -130,7 +135,7 @@ describe('UserModule (e2e)', () => {
     });
     // it("should not get token")
     it('잘못된 자격 증명(wrong credentials)과 함께 로그인 할 수 없습니다.', () => {
-      graphqlRequest(
+      return graphqlRequest(
         `mutation {
         login(input:{
           email: "${testUser.email}",
@@ -159,7 +164,95 @@ describe('UserModule (e2e)', () => {
     });
   });
   // userProfile think need user, found out id, userId
-  it.todo('userProfile');
+  describe('userProfile', () => {
+    let userId: number;
+    // beforeAll the test inside of userProfile
+    beforeAll(async () => {
+      // this will take out first element the array inside a variable called user
+      // console.log(await usersRepository.find());
+      const [user] = await usersRepository.find();
+      // const userId not going to work
+      userId = user.id;
+    });
+    // may not be used in a describe block containing no tests.
+    it('사용자 프로필을 볼 수 있어야 한다.', () => {
+      return (
+        request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          // header set
+          .set(`X-JWT`, jwtToken)
+          .send({
+            query: `
+        {
+          userProfile(userId:${userId}) {
+            error
+            ok
+            user {
+              id
+            }
+          }
+        }
+        `,
+          })
+          .expect(200)
+          .expect((res) => {
+            const {
+              body: {
+                data: {
+                  userProfile: {
+                    ok,
+                    error,
+                    user: { id },
+                  },
+                },
+              },
+            } = res;
+            // { data: { userProfile: { error: null, ok: true, user: [Object] } } }
+            // console.log(res.body);
+            expect(ok).toBe(true);
+            expect(error).toBe(null);
+            expect(id).toBe(userId);
+          })
+      );
+    });
+    it('프로필을 찾을 수 없습니다.', () => {
+      return (
+        request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          // header set
+          .set(`X-JWT`, jwtToken)
+          // userId dosn't exist
+          .send({
+            query: `
+      {
+        userProfile(userId: 999) {
+          error
+          ok
+          user {
+            id
+          }
+        }
+      }
+      `,
+          })
+          .expect(200)
+          .expect((res) => {
+            const {
+              body: {
+                data: {
+                  userProfile: { ok, error, user },
+                },
+              },
+            } = res;
+            // { data: { userProfile: { error: null, ok: true, user: [Object] } } }
+            // console.log(res.body);
+            expect(ok).toBe(false);
+            expect(error).toBe('사용자를 찾을 수 없습니다.');
+            expect(user).toBe(null);
+          })
+      );
+    });
+  });
   it.todo('me');
   it.todo('verifyEmail');
   it.todo('hi');
