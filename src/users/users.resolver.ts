@@ -145,7 +145,7 @@ export class UsersResolver {
     `;
     return this.usersService.editProfile(authUser.id, editProfileInput);
   }
-  //  @UseGuards(AuthGaurd) 인증 여부는 없어도 될 것 같음
+  // @UseGuards(AuthGaurd) 인증 여부는 없어도 될 것 같음
   @Mutation((returns) => VerifyEmailOutput) // graphql을 위한 VerifyEmailOutput
   // 또는 VerifyEmailInput 대신 {code}, VerifyEmailInput.code 대신 code를 넣어도 된다.
   verifyEmail(

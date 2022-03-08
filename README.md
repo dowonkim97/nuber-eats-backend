@@ -7588,4 +7588,87 @@ jest.mock('got', () => {
     });
   });
 ```
+
 - users.e2e-spec.ts 'createAccount', '계정이 이미 존재하면 실패하게 한다.' e2e test
+
+# #9.4
+
+```
+// posting /graphql url
+const GRAPHQL_ENDPOINT = '/graphql';
+const testUser = {
+  email: 'won@won.com',
+  password: '12345',
+};
+
+ const graphqlRequest = (query: string) =>
+    request(app.getHttpServer()).post(GRAPHQL_ENDPOINT).send({ query });
+  // share token
+  let jwtToken: string;
+
+  // at userProfile resolver, to be able login state -> see profile
+  describe('login', () => {
+    // it("should get token")
+    it('정확한 자격 증명(correct credentials)과 함께 로그인 하게 한다.', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          query: `mutation {
+          login(input:{
+            email: "${testUser.email}",
+            password:"${testUser.password}",
+          }) {
+          ok
+          error
+          token
+          }
+        }`,
+        })
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { login },
+            },
+          } = res;
+          console.log(res);
+          expect(login.ok).toBe(true);
+          expect(login.error).toBe(null);
+          expect(login.token).toEqual(expect.any(String));
+          // update token, using the token later, do not use const token reason won't be able access token, outside variable
+          jwtToken = login.token;
+        });
+    });
+    // it("should not get token")
+    it('잘못된 자격 증명(wrong credentials)과 함께 로그인 할 수 없습니다.', () => {
+      graphqlRequest(
+        `mutation {
+        login(input:{
+          email: "${testUser.email}",
+          password:"xxxxx",
+        }) {
+        ok
+        error
+        token
+        }
+      }`,
+      )
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { login },
+            },
+          } = res;
+          // text: '{"data":{"login":{"ok":true,"error":null,"token":"eyJh~"}}}\n',
+          // console.log(res);
+          expect(login.ok).toBe(false);
+          // expect(login.error).toBe('alal') = Expected: "alal", Received: "잘못된 비밀번호입니다."
+          expect(login.error).toBe('잘못된 비밀번호입니다.');
+          expect(login.token).toBe(null);
+        });
+    });
+  });
+```
+
+- users.e2e-spec.ts login, 정확한 자격 증명(correct credentials)과 함께 로그인 하게 한다. 잘못된 자격 증명(wrong credentials)과 함께 로그인 할 수 없습니다. e2e test
