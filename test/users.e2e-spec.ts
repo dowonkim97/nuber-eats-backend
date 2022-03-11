@@ -125,7 +125,7 @@ describe('UserModule (e2e)', () => {
               data: { login },
             },
           } = res;
-          console.log(res);
+          // console.log(res);
           expect(login.ok).toBe(true);
           expect(login.error).toBe(null);
           expect(login.token).toEqual(expect.any(String));
@@ -253,8 +253,64 @@ describe('UserModule (e2e)', () => {
       );
     });
   });
-  it.todo('me');
+  describe('me', () => {
+    it('나의 프로필을 찾을 수 있게 한다.', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .set('X-JWT', jwtToken)
+        .send({
+          query: `{
+          me {
+            email
+          }
+        }
+        `,
+        })
+        .expect(200)
+        .expect((res) => {
+          //   { data: { me: { email: 'won@won.com' } } }
+          console.log(res.body);
+          const {
+            body: {
+              data: {
+                me: { email },
+              },
+            },
+          } = res;
+          expect(email).toBe(testUser.email);
+        });
+    });
+    it('사용자의 로그아웃을 허용하지 않게 한다.', () => {
+      return (
+        request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          // not set the token
+          //.set('X-JWT', jwtToken)
+          .send({
+            query: `{
+        me {
+          email
+        }
+      }
+      `,
+          })
+          .expect(200)
+          .expect((res) => {
+            const {
+              // body: { errors: [ [Object] ], data: null },
+              // body: { errors },
+              body: {
+                errors: [{ message }],
+              },
+            } = res;
+            // const [error] = errors;
+            // text: {"errors":[{"message":"Forbidden resource"}
+            expect(message).toBe('Forbidden resource');
+          })
+      );
+    });
+  });
   it.todo('verifyEmail');
-  it.todo('hi');
   it.todo('editProfile');
+  it.todo('hi');
 });

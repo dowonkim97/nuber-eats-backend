@@ -91,6 +91,8 @@ export class UsersResolver {
   @UseGuards(AuthGaurd)
   // me(), resolver에서 request를 보내고 있는 주체를 알아야 한다.
   me(@AuthUser() authUser: User) {
+    // AuthUser는 jwt middleware에서 가져왔다.
+    // console.log(authUser);
     return authUser;
   }
 

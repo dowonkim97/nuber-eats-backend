@@ -7538,7 +7538,6 @@ const GRAPHQL_ENDPOINT = '/graphql';
 
 ```
     "test:e2e": "jest --config ./test/jest-e2e.json --detectOpenHandles"
-
 ```
 
 - package.json에서 "test:e2e"에 --detectOpenHandles를 추가한다.
@@ -7687,6 +7686,14 @@ const testUser = {
     await app.init();
 ```
 
+```
+ let usersRepository: Repository<User>;
+
+ // <Repository<User>> type
+
+    usersRepository = module.get<Repository<User>>(getRepositoryToken(User));
+```
+
 - users.e2e-spec.ts에서 beforeAll 안에 모듈이 있을 때, 모듈로부터 뭔가를 가져올 수 있다. usersRepository를 가져온다.
 
 ```
@@ -7812,3 +7819,108 @@ const testUser = {
 ```
 
 - userprofile 객체를 한 번에 테스트해본다.
+
+# #9.6
+
+```
+{
+  me {
+    email
+  }
+}
+```
+
+- me로 로그인 할 때, 로그인 안될 때는 "message": "Forbidden resource", 에러가 발생한다. guard를 테스트해준다. me가 login/not login 2개의 state를 가지고 있는 resolver이기 때문이다.
+
+```
+const user = await this.usersService.findById(decoded['id']);
+req['user'] = user;
+```
+
+- jwt.middleware.ts에서 위 형식으로 했더니 TypeError: Cannot read properties of null (reading 'me') 에러가 발생한다.
+
+```
+const { user, ok } = await this.usersService.findById(decoded['id']);
+  if (ok) {
+    req['user'] = { user }.user;
+  }
+}
+```
+
+```
+   ok: true,
+      user: User {
+        id: 1,
+        createdAt: 2022-03-11T12:22:45.977Z,
+        updatedAt: 2022-03-11T12:22:45.977Z,
+        email: 'won@won.com',
+        role: 1,
+        verified: false
+      }
+    }
+```
+
+- jwt.middleware.ts에서 user: User 경로 문제로 Cannot read properties of null (reading 'me') 인 것 같다. 위처럼 해주면 해결된다.
+
+```
+  describe('me', () => {
+    it('나의 프로필을 찾을 수 있게 한다.', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .set('X-JWT', jwtToken)
+        .send({
+          query: `{
+          me {
+            email
+          }
+        }
+        `,
+        })
+        .expect(200)
+        .expect((res) => {
+          //   { data: { me: { email: 'won@won.com' } } }
+          console.log(res.body);
+          const {
+            body: {
+              data: {
+                me: { email },
+              },
+            },
+          } = res;
+          expect(email).toBe(testUser.email);
+        });
+    });
+    it('사용자의 로그아웃을 허용하지 않게 한다.', () => {
+      return (
+        request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          // not set the token
+          //.set('X-JWT', jwtToken)
+          .send({
+            query: `{
+        me {
+          email
+        }
+      }
+      `,
+          })
+          .expect(200)
+          .expect((res) => {
+            const {
+              // body: { errors: [ [Object] ], data: null },
+              // body: { errors },
+              body: {
+                errors: [{ message }],
+              },
+            } = res;
+            // const [error] = errors;
+            // text: {"errors":[{"message":"Forbidden resource"}
+            expect(message).toBe('Forbidden resource');
+          })
+      );
+    });
+  });
+```
+
+- users.e2e-spec.ts me, '나의 프로필을 찾을 수 있게 한다.'
+  '사용자의 로그아웃을 허용하지 않게 한다.' e2e test
