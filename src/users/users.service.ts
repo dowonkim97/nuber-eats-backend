@@ -148,6 +148,9 @@ export class UserService {
         user.email = email;
         // user는 verified 되지 않은 상태가 된다.
         user.verified = false;
+        // new verification 만들기 전 user의 id가 user.id를 갖는 verification을 삭제한다.
+        await this.verifications.delete({ user: { id: user.id } });
+        // console.log(user);
         // verification 생성
         // user를 create하고 save하고 있음
         // verification 과 sendVerificationEmail 추가
@@ -164,6 +167,9 @@ export class UserService {
         ok: true,
       };
     } catch (error) {
+      // console.log(error);
+      // QueryFailedError, driverError: error: 중복된 키 값이 "REL_8300048608d8721aea27747b07" 고유 제약 조건을 위반함, detail: '("userId")=(1) 키가 이미 있습니다.',
+      // verification.entity.ts에서 user 당 verificaiton을 하나씩 받을 수 있는 OneToOne가 있지만,
       return { ok: false, error: '프로필을 업데이트 할 수 없습니다.' };
     }
   }

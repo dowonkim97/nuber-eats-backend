@@ -7912,6 +7912,7 @@ const { user, ok } = await this.usersService.findById(decoded['id']);
               body: {
                 errors: [{ message }],
               },
+
             } = res;
             // const [error] = errors;
             // text: {"errors":[{"message":"Forbidden resource"}
@@ -7924,3 +7925,133 @@ const { user, ok } = await this.usersService.findById(decoded['id']);
 
 - users.e2e-spec.ts me, '나의 프로필을 찾을 수 있게 한다.'
   '사용자의 로그아웃을 허용하지 않게 한다.' e2e test
+
+# #9.7
+
+- todo - email, password change, ok:true expect
+
+```
+  user.email = email;
+```
+
+- users.service.ts에서 editProfile이 email을 변경할 수 있고, 보안을 위해 이미 사용중인 이메일로 수정을 막는다.
+- editProfile fuction을 수정해야 한다.
+
+```
+  @Column({ unique: true })
+```
+
+- email 수정 전 email 가지고 있는 유저가 이미 사용중인지 여부를 확인하고, email을 가지고 있다면 변경할 수 없다는 메시지로 알려줘야 한다. editProfile unit test를 업데이트 한다. 그렇기 위해서는 users.entity.ts에서 unique true를 해준다.
+
+```
+catch (error) {
+console.log(error);
+}
+```
+
+- users.service.ts에서 QueryFailedError, driverError: error: 중복된 키 값이 "REL_8300048608d8721aea27747b07" 고유 제약 조건을 위반함, detail: '("userId")=(1) 키가 이미 있습니다. 에러가 발생한다.
+- verification.entity.ts에서 user 당 verificaiton을 하나씩 받을 수 있는 OneToOne가 있지만, test는 user를 먼저 만들었다.
+- test db에는 하나의 verification이 이미 exist한 상태였다. 그 상태에서 이메일을 변경하려고 하고, 또 다른 verification을 만들게 되고, verification이 2개가 되기 때문에 ("userId")=(1) 에러가 발생한 것이다.
+- 그렇기 때문에 프로필 수정하려고 할 때 모든 verification을 삭제한다.
+
+```
+await this.verifications.delete({ user: { id: user.id } });
+// console.log(user);
+```
+
+- users.service.ts에서 new verification 만들기 전 user의 id가 user.id를 갖는 verification을 삭제한다.
+
+```
+  describe('editProfile', () => {
+    const NEW_EMAIL = 'hello@won.com';
+    it('이메일을 변경하게 한다.', () => {
+      return (
+        request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          .set('x-jwt', jwtToken)
+          .send({
+            query: `
+            mutation {
+              editProfile(input: { email: "${NEW_EMAIL}" }) {
+                ok
+                error
+            }
+          }`,
+          })
+          .expect(200)
+          // text: '{"data":{"editProfile":{"ok":false,"error":"프로필을 업데이트 할 수 없습니다."}}}\n',
+          .expect((res) => {
+            //console.log(res)
+            const {
+              body: {
+                data: {
+                  editProfile: { ok, error },
+                },
+              },
+            } = res;
+            // users.service.ts catch error Expected: true, Received: false
+            expect(ok).toBe(true);
+            expect(error).toBe(null);
+          })
+        // .then => another test put
+        /*    .then(() => {
+            // 나의 프로필을 찾을 수 있게 한다.
+            return request(app.getHttpServer())
+              .post(GRAPHQL_ENDPOINT)
+              .set('x-jwt', jwtToken)
+              .send({
+                query: `
+            {
+              me {
+                email
+              }
+            }
+            `,
+              })
+              .expect(200)
+              .expect((res) => {
+                // { data: { me: { email: 'won@won.com' } } }
+                // console.log(res.body);
+                const {
+                  body: {
+                    data: {
+                      me: { email },
+                    },
+                  },
+                } = res;
+                expect(email).toBe(NEW_EMAIL);
+              });
+          }) */
+      );
+    });
+    it('새로운 이메일을 가질 수 있게 한다.', () => {
+      // 나의 프로필을 찾을 수 있게 한다.
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .set('x-jwt', jwtToken)
+        .send({
+          query: `
+     {
+       me {
+         email
+       }
+     }
+     `,
+        })
+        .expect(200)
+        .expect((res) => {
+          // { data: { me: { email: 'won@won.com' } } }
+          // console.log(res.body);
+          const {
+            body: {
+              data: {
+                me: { email },
+              },
+            },
+          } = res;
+          expect(email).toBe(NEW_EMAIL);
+        });
+    });
+  });
+```
+- users.e2e-spec.ts editProfile, 이메일을 변경하게 한다. 새로운 이메일을 가질 수 있게 한다. e2e test

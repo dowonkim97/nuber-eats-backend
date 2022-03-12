@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-// if Type 'typeof supertest' has no call signatures error import request from 'supertest';
+// if Type 'typeof supertest' has no call signatures error -> import request from 'supertest';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { getConnection, Repository } from 'typeorm';
@@ -91,7 +91,7 @@ describe('UserModule (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(res.body.data.createAccount.ok).toBe(false);
-          // If it should pass with deep equality, replace "toBe" with "toStrictEqual"    Expected: Any<String>, Received: "해당 이메일을 가진 사용자가 이미 존재합니다."
+          // If it should pass with deep equality, replace "toBe" with "toStrictEqual", Expected: Any<String>, Received: "해당 이메일을 가진 사용자가 이미 존재합니다."
           expect(res.body.data.createAccount.error).toEqual(expect.any(String));
           // toBe는 정확한 메시지 입력해야 한다.
           expect(res.body.data.createAccount.error).toBe(
@@ -174,13 +174,14 @@ describe('UserModule (e2e)', () => {
       // const userId not going to work
       userId = user.id;
     });
+
     // may not be used in a describe block containing no tests.
     it('사용자 프로필을 볼 수 있어야 한다.', () => {
       return (
         request(app.getHttpServer())
           .post(GRAPHQL_ENDPOINT)
           // header set
-          .set(`X-JWT`, jwtToken)
+          .set(`x-jwt`, jwtToken)
           .send({
             query: `
         {
@@ -220,7 +221,7 @@ describe('UserModule (e2e)', () => {
         request(app.getHttpServer())
           .post(GRAPHQL_ENDPOINT)
           // header set
-          .set(`X-JWT`, jwtToken)
+          .set(`x-jwt`, jwtToken)
           // userId dosn't exist
           .send({
             query: `
@@ -257,9 +258,10 @@ describe('UserModule (e2e)', () => {
     it('나의 프로필을 찾을 수 있게 한다.', () => {
       return request(app.getHttpServer())
         .post(GRAPHQL_ENDPOINT)
-        .set('X-JWT', jwtToken)
+        .set('x-jwt', jwtToken)
         .send({
-          query: `{
+          query: `
+        {
           me {
             email
           }
@@ -268,8 +270,8 @@ describe('UserModule (e2e)', () => {
         })
         .expect(200)
         .expect((res) => {
-          //   { data: { me: { email: 'won@won.com' } } }
-          console.log(res.body);
+          // { data: { me: { email: 'won@won.com' } } }
+          // console.log(res.body);
           const {
             body: {
               data: {
@@ -287,7 +289,8 @@ describe('UserModule (e2e)', () => {
           // not set the token
           //.set('X-JWT', jwtToken)
           .send({
-            query: `{
+            query: `
+      {
         me {
           email
         }
@@ -310,7 +313,97 @@ describe('UserModule (e2e)', () => {
       );
     });
   });
+  describe('editProfile', () => {
+    const NEW_EMAIL = 'hello@won.com';
+    it('이메일을 변경하게 한다.', () => {
+      return (
+        request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          .set('x-jwt', jwtToken)
+          .send({
+            query: `
+            mutation {
+              editProfile(input: { email: "${NEW_EMAIL}" }) {
+                ok
+                error
+            }
+          }`,
+          })
+          .expect(200)
+          // text: '{"data":{"editProfile":{"ok":false,"error":"프로필을 업데이트 할 수 없습니다."}}}\n',
+          .expect((res) => {
+            //console.log(res)
+            const {
+              body: {
+                data: {
+                  editProfile: { ok, error },
+                },
+              },
+            } = res;
+            // users.service.ts catch error Expected: true, Received: false
+            expect(ok).toBe(true);
+            expect(error).toBe(null);
+          })
+        // .then => another test put
+        /*    .then(() => {
+            // 나의 프로필을 찾을 수 있게 한다.
+            return request(app.getHttpServer())
+              .post(GRAPHQL_ENDPOINT)
+              .set('x-jwt', jwtToken)
+              .send({
+                query: `
+            {
+              me {
+                email
+              }
+            }
+            `,
+              })
+              .expect(200)
+              .expect((res) => {
+                // { data: { me: { email: 'won@won.com' } } }
+                // console.log(res.body);
+                const {
+                  body: {
+                    data: {
+                      me: { email },
+                    },
+                  },
+                } = res;
+                expect(email).toBe(NEW_EMAIL);
+              });
+          }) */
+      );
+    });
+    it('새로운 이메일을 가질 수 있게 한다.', () => {
+      // 나의 프로필을 찾을 수 있게 한다.
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .set('x-jwt', jwtToken)
+        .send({
+          query: `
+     {
+       me {
+         email
+       }
+     }
+     `,
+        })
+        .expect(200)
+        .expect((res) => {
+          // { data: { me: { email: 'won@won.com' } } }
+          // console.log(res.body);
+          const {
+            body: {
+              data: {
+                me: { email },
+              },
+            },
+          } = res;
+          expect(email).toBe(NEW_EMAIL);
+        });
+    });
+  });
   it.todo('verifyEmail');
-  it.todo('editProfile');
   it.todo('hi');
 });
