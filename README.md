@@ -8070,8 +8070,8 @@ await this.verifications.delete({ user: { id: user.id } });
     verificationRepository = module.get<Repository<Verification>>(getRepositoryToken(Verification))
 ```
 
-- verification을 let 선언, verificationRepository를 beforeAll에 넣는다.
-- 이렇게 하지 않고 새 db 생성하고, verification이 생기고, 그 verification을 삭제하는 것이다.
+- users.e2e-spec.ts에서 verification을 let 선언, verificationRepository를 beforeAll에 넣는다.
+- 이렇게 하지 않고 새 db 생성하고, verification이 생기고, 그 verification을 삭제하는 것이 있다.
 - email을 변경하기 위해 다른 verification을 만드는 것이고,verification이 id가 2가 된다. 그리고 2인 verification을 찾을 수도 있다.
 
 ```

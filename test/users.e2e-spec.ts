@@ -451,7 +451,7 @@ describe('UserModule (e2e)', () => {
           expect(error).toBe(null);
         });
     });
-    it('잘못된 검증 코드(verification code)와 인증을 찾을 수 없습니다를 실패하게 한다.', () => {
+    it('잘못된 검증 코드(verification code)와 인증을 찾을 수 없습니다 메시지로 실패하게 한다.', () => {
       /*  return request(app.getHttpServer())
         .post(GRAPHQL_ENDPOINT)
         .send({ */
