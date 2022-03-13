@@ -7942,6 +7942,7 @@ const { user, ok } = await this.usersService.findById(decoded['id']);
 ```
 
 - email 수정 전 email 가지고 있는 유저가 이미 사용중인지 여부를 확인하고, email을 가지고 있다면 변경할 수 없다는 메시지로 알려줘야 한다. editProfile unit test를 업데이트 한다. 그렇기 위해서는 users.entity.ts에서 unique true를 해준다.
+- 고유 인덱스를 만들 수 없음 에러 시 unique true를 지우고 나중에 한다.
 
 ```
 catch (error) {
@@ -7951,7 +7952,7 @@ console.log(error);
 
 - users.service.ts에서 QueryFailedError, driverError: error: 중복된 키 값이 "REL_8300048608d8721aea27747b07" 고유 제약 조건을 위반함, detail: '("userId")=(1) 키가 이미 있습니다. 에러가 발생한다.
 - verification.entity.ts에서 user 당 verificaiton을 하나씩 받을 수 있는 OneToOne가 있지만, test는 user를 먼저 만들었다.
-- test db에는 하나의 verification이 이미 exist한 상태였다. 그 상태에서 이메일을 변경하려고 하고, 또 다른 verification을 만들게 되고, verification이 2개가 되기 때문에 ("userId")=(1) 에러가 발생한 것이다.
+- test db에는 하나의 verification이 이미 exist한 상태였다. 그 상태에서 이메일을 변경하기 때문에 또 다른 verification을 만들게 되고, verification이 2개가 되기 때문에 ("userId")=(1) 에러가 발생한 것이다.
 - 그렇기 때문에 프로필 수정하려고 할 때 모든 verification을 삭제한다.
 
 ```
@@ -7960,6 +7961,7 @@ await this.verifications.delete({ user: { id: user.id } });
 ```
 
 - users.service.ts에서 new verification 만들기 전 user의 id가 user.id를 갖는 verification을 삭제한다.
+- expect(received).toBe(expected) Object.is equality, Expected: true, Received: false 에러가 사라짐
 
 ```
   describe('editProfile', () => {
@@ -8054,4 +8056,5 @@ await this.verifications.delete({ user: { id: user.id } });
     });
   });
 ```
+
 - users.e2e-spec.ts editProfile, 이메일을 변경하게 한다. 새로운 이메일을 가질 수 있게 한다. e2e test

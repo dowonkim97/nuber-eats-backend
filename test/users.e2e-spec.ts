@@ -375,7 +375,7 @@ describe('UserModule (e2e)', () => {
           }) */
       );
     });
-    it('새로운 이메일을 가질 수 있게 한다.', () => {
+    it('새로운 이메일을 찾을 수 있게 한다.', () => {
       // 나의 프로필을 찾을 수 있게 한다.
       return request(app.getHttpServer())
         .post(GRAPHQL_ENDPOINT)
