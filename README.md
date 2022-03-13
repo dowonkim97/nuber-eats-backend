@@ -8058,3 +8058,91 @@ await this.verifications.delete({ user: { id: user.id } });
 ```
 
 - users.e2e-spec.ts editProfile, 이메일을 변경하게 한다. 새로운 이메일을 가질 수 있게 한다. e2e test
+
+# #9.8
+
+- verifyEmail은 email에 접근하고, token을 취득할 권한을 요구한다.
+- userById는 beforeAll을 필요로 했다.
+- big describe, beforeAll, small describe, beforeAll
+
+```
+  let verificationRepository: Repository<Verification>;
+    verificationRepository = module.get<Repository<Verification>>(getRepositoryToken(Verification))
+```
+
+- verification을 let 선언, verificationRepository를 beforeAll에 넣는다.
+- 이렇게 하지 않고 새 db 생성하고, verification이 생기고, 그 verification을 삭제하는 것이다.
+- email을 변경하기 위해 다른 verification을 만드는 것이고,verification이 id가 2가 된다. 그리고 2인 verification을 찾을 수도 있다.
+
+```
+@Mutation((returns) => VerifyEmailOutput)
+  verifyEmail
+```
+
+- users.resolver.ts에서 verifyEmail은 @UseGuards(AuthGaurd) 인증 여부는 없어서 login 할 필요가 없기 때문에 users.e2e-spec.ts에서 이메일을 검증(verify)하게 한다에서 header .set을 추가하지 않아도 된다.
+- localhost:3000/graphql을 킬 때마다 에러가 나기 때문에 @Column({ unique: true })에서 unique: true를 임시 삭제해준다.
+
+```
+  describe('verifyEmail', () => {
+    let verificationCode: string;
+    beforeAll(async () => {
+      const [verification] = await verificationRepository.find();
+      // console.log(verification);
+      verificationCode = verification.code;
+    });
+    it('이메일을 검증(verify)하게 한다.', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          query: `mutation {
+          verifyEmail(input: {
+            code:"${verificationCode}"
+          }) {
+            ok
+            error
+          }
+        }`,
+        })
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: {
+                verifyEmail: { ok, error },
+              },
+            },
+          } = res;
+          expect(ok).toBe(true);
+          expect(error).toBe(null);
+        });
+    });
+    it('잘못된 검증 코드(verification code)와 인증을 찾을 수 없습니다를 실패하게 한다.', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          query: `mutation {
+        verifyEmail(input: {
+          code:"xxxxx"
+        }) {
+          ok
+          error
+        }
+      }`,
+        })
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: {
+                verifyEmail: { ok, error },
+              },
+            },
+          } = res;
+          expect(ok).toBe(false);
+          expect(error).toBe('인증을 찾을 수 없습니다.');
+        });
+    });
+  });
+```
+
+- users.e2e-spec.ts verifyEmail 이메일을 검증(verify)하게 한다. 잘못된 검증 코드(verification code)와 인증을 찾을 수 없습니다를 실패하게 한다. e2e test

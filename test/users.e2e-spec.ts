@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { getConnection, Repository } from 'typeorm';
 import { User } from 'src/users/entities/users.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Verification } from 'src/users/entities/verification.entity';
 
 jest.mock('got', () => {
   return {
@@ -25,6 +26,7 @@ describe('UserModule (e2e)', () => {
     request(app.getHttpServer()).post(GRAPHQL_ENDPOINT).send({ query });
   let app: INestApplication;
   let usersRepository: Repository<User>;
+  let verificationRepository: Repository<Verification>;
   // share token
   let jwtToken: string;
 
@@ -36,6 +38,9 @@ describe('UserModule (e2e)', () => {
     app = module.createNestApplication();
     // <Repository<User>> type
     usersRepository = module.get<Repository<User>>(getRepositoryToken(User));
+    verificationRepository = module.get<Repository<Verification>>(
+      getRepositoryToken(Verification),
+    );
     await app.init();
   });
 
@@ -342,6 +347,7 @@ describe('UserModule (e2e)', () => {
             } = res;
             // users.service.ts catch error Expected: true, Received: false
             expect(ok).toBe(true);
+
             expect(error).toBe(null);
           })
         // .then => another test put
@@ -404,6 +410,65 @@ describe('UserModule (e2e)', () => {
         });
     });
   });
-  it.todo('verifyEmail');
+  describe('verifyEmail', () => {
+    let verificationCode: string;
+    beforeAll(async () => {
+      const [verification] = await verificationRepository.find();
+      // console.log(verification);
+      verificationCode = verification.code;
+    });
+    it('이메일을 검증(verify)하게 한다.', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          query: `mutation {
+          verifyEmail(input: {
+            code:"${verificationCode}"
+          }) {
+            ok
+            error
+          }
+        }`,
+        })
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: {
+                verifyEmail: { ok, error },
+              },
+            },
+          } = res;
+          expect(ok).toBe(true);
+          expect(error).toBe(null);
+        });
+    });
+    it('잘못된 검증 코드(verification code)와 인증을 찾을 수 없습니다를 실패하게 한다.', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          query: `mutation {
+        verifyEmail(input: {
+          code:"xxxxx"
+        }) {
+          ok
+          error
+        }
+      }`,
+        })
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: {
+                verifyEmail: { ok, error },
+              },
+            },
+          } = res;
+          expect(ok).toBe(false);
+          expect(error).toBe('인증을 찾을 수 없습니다.');
+        });
+    });
+  });
   it.todo('hi');
 });
