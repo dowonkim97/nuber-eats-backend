@@ -8280,3 +8280,13 @@ export class User {
 
 - 에러가 발생해서 users.entity.ts에서 unique: true를 빼니 정상적으로 되었다. error: 고유 인덱스를 만들 수 없음 이거 계속 왜 이런 걸까?
 - https://github.com/typeorm/typeorm/issues/719 ( query failed: ALTER TABLE "user" ADD CONSTRAINT "" UNIQUE ("email"))
+- 처음엔 typeorm을 업데이트 하면 해결될 줄 알았는데 아니였다.
+
+```
+ DELETE FROM public."user"
+	WHERE ID=6;
+```
+
+- detail: '(email)=(saddad@asdad.com) 키가 중복됨' 에러였는데 이메일이 중복되어 id를 지워줘서 해결했다.
+
+- pasta라는 카테고리를 지운다면 category 모든 restaurant 지워야 할까? restaurant에 category가 없도록 설정해야 할까?

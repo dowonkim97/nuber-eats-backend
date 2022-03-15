@@ -4912,7 +4912,7 @@
     "postgres-date" "~1.0.4"
     "postgres-interval" "^1.1.0"
 
-"pg@*", "pg@^8.7.1", "pg@>=8.0":
+"pg@^8.5.1", "pg@^8.7.1", "pg@>=8.0":
   "integrity" "sha512-7bdYcv7V6U3KAtWjpQJJBww0UEsWuh4yQ/EjNf2HeO/NnvKjpvhEIe/A/TleP6wtmSKnUnghs5A9jUoK6iDdkA=="
   "resolved" "https://registry.npmjs.org/pg/-/pg-8.7.1.tgz"
   "version" "8.7.1"
@@ -5959,10 +5959,10 @@
   "resolved" "https://registry.npmjs.org/typedarray/-/typedarray-0.0.6.tgz"
   "version" "0.0.6"
 
-"typeorm@^0.2.34", "typeorm@^0.2.41":
-  "integrity" "sha512-/d8CLJJxKPgsnrZWiMyPI0rz2MFZnBQrnQ5XP3Vu3mswv2WPexb58QM6BEtmRmlTMYN5KFWUz8SKluze+wS9xw=="
-  "resolved" "https://registry.npmjs.org/typeorm/-/typeorm-0.2.41.tgz"
-  "version" "0.2.41"
+"typeorm@^0.2.34", "typeorm@^0.2.45":
+  "integrity" "sha512-c0rCO8VMJ3ER7JQ73xfk0zDnVv0WDjpsP6Q1m6CVKul7DB9iVdWLRjPzc8v2eaeBuomsbZ2+gTaYr8k1gm3bYA=="
+  "resolved" "https://registry.npmjs.org/typeorm/-/typeorm-0.2.45.tgz"
+  "version" "0.2.45"
   dependencies:
     "@sqltools/formatter" "^1.2.2"
     "app-root-path" "^3.0.0"
@@ -5977,6 +5977,7 @@
     "reflect-metadata" "^0.1.13"
     "sha.js" "^2.4.11"
     "tslib" "^2.1.0"
+    "uuid" "^8.3.2"
     "xml2js" "^0.4.23"
     "yargs" "^17.0.1"
     "zen-observable-ts" "^1.0.0"
