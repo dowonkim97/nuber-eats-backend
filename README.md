@@ -8146,3 +8146,137 @@ await this.verifications.delete({ user: { id: user.id } });
 ```
 
 - users.e2e-spec.ts verifyEmail 이메일을 검증(verify)하게 한다. 잘못된 검증 코드(verification code)와 인증을 찾을 수 없습니다를 실패하게 한다. e2e test
+
+# #10.0
+
+- restaurant crud 기능을 만들고, model을 만든다.
+
+- Restaurant Model
+
+- name
+- category
+- address
+- coverImage
+
+```
+  @IsString()
+  password: string;
+  @IsBoolean()
+  verified: boolean
+```
+
+- users.entity.ts add users entity validation @IsString, @IsBoolean
+
+```
+export class Restaurant extends CoreEntity {
+ // delete id
+  /*
+ @PrimaryGeneratedColumn()
+  @Field((type) => Number)
+  id: number;
+  */
+```
+
+- id delete -> extends CoreEntity
+- restaurants.entity.ts extends CoreEntity same users.entitiy.ts user id, createdAt, updatedAt
+- core.entity.ts = id, createdAt, updatedAt
+
+```
+  /*
+ // isGood이라는 1개의 필드를 가지고 있다. (제거함)
+  @Field((type) => Boolean, { nullable: true }) // graphql 스키마에서 기본값 true -> { nullable: true }
+  @Column({ default: true }) // database를 기본값 true
+  @IsOptional() // vaidation은 optional
+  @IsBoolean() // value가 있으면 boolean
+  // nullable이기 떄문에 ?를 붙여준다.
+  // isGood? -> isVegan으로 변경, { nullable: true } 삭제
+  isVegan: boolean;
+  */
+
+
+  @Field((type) => String)
+  @Column()
+  @IsString()
+  coverImg: string;
+```
+
+- restaurants.entity.ts
+- isVegan block
+- graphql String, Cover Image
+
+```
+@InputType({ isAbstract: true })
+@ObjectType() // graphQL을 위한 Category의 ObjectType
+@Entity()
+export class Category extends CoreEntity {
+  // arg type은 아무 의미 없기 때문에 아무거나 넣어도 됨
+  // name이라는 1개의 필드를 가지고 있다.
+  @Field((type) => String)
+  @Column()
+  @IsString()
+  @Length(5)
+  name: string;
+
+  // graphql String, Cover Image
+  @Field((type) => String)
+  @Column()
+  @IsString()
+  coverImg: string;
+}
+```
+
+- restaurants/entities/category.entity.ts create category.entity.ts file
+- https://typeorm.io/#/many-to-one-one-to-many-relations (다대일/일대다 관계 검색)
+
+```
+@Entity()
+export class Photo {
+    @ManyToOne(() => User, user => user.photos)
+    user: User;
+}
+```
+
+- Photo는 User에 의해 만들어졌고,
+
+```
+export class User {
+    @OneToMany(() => Photo, photo => photo.user)
+    photos: Photo[];
+```
+
+- user는 Photo[]를 여러개 가질 수 있다.
+- category.entity.ts에선 user 대신 restaurant이다.
+- category는 많은 restaurant를 가질 수 있기 때문에 one-to-many가 필요하다. 3:36 uberEats 사진을 보면 하나의 카테고리에 여러개 photo props가 있는 것을 볼 수 있다.
+- photo => photo.user처럼 역행(inverse)하는 건 restaurant에 어떻게 나타낼 수 있을까? category.entity.ts에서는 (restaurant) => restaurant.category restaurants.entity.ts에서는 (category) => category.restaurants로 역행 관계를 나타낼 수 있다.
+
+```
+
+  @Field((type) => [Restaurant])
+  @OneToMany((type) => Restaurant, (restaurant) => restaurant.category)
+  // Restaurant array type 복수형태
+  restaurants: Restaurant[];
+```
+
+- one-to-many relations
+- category.entity.ts에서 하나의 category가 여러 restaurant(restaurants)를 가질 수 있다.
+
+```
+  @Field((type) => Category)
+  @ManyToOne((type) => Category, (category) => category.restaurants)
+  category: Category;
+```
+
+- many-to-one relations
+- restaurants.entity.ts에서 restaurant는 하나의 category를 가진다.
+
+```
+    TypeOrmModule.forRoot({
+      entities: [User, Verification, Restaurant, Category],
+    }),
+```
+
+- app.module.ts에서 Restaurant, Category을 추가해준다.
+- e2e testing 때문에 pgAdmin4 에러가 발생한다. nuber-eats restaurant table을 삭제해준다.
+
+- 에러가 발생해서 users.entity.ts에서 unique: true를 빼니 정상적으로 되었다. error: 고유 인덱스를 만들 수 없음 이거 계속 왜 이런 걸까?
+- https://github.com/typeorm/typeorm/issues/719 ( query failed: ALTER TABLE "user" ADD CONSTRAINT "" UNIQUE ("email"))
