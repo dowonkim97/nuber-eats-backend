@@ -8289,4 +8289,109 @@ export class User {
 
 - detail: '(email)=(saddad@asdad.com) 키가 중복됨' 에러였는데 이메일이 중복되어 id를 지워줘서 해결했다.
 
-- pasta라는 카테고리를 지운다면 category 모든 restaurant 지워야 할까? restaurant에 category가 없도록 설정해야 할까?
+- 만약 pasta라는 카테고리를 지운다면 category 모든 restaurant 지워야 할까? restaurant에 category가 없도록 설정해야 할까?
+
+# #10.1
+
+```
+  @Field((type) => Category, { nullable: true })
+  @ManyToOne((type) => Category, (category) => category.restaurants, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  category: Category;
+```
+
+- restaurants.entity.ts에서 category만 지워지게 해야 하기 때문에 category를 지울 때 restaurant을 지우면 안되기 때문에 nullable: true로 설정해준다.
+- nullable은 값형식의 데이터 타입에 Null 값을 넣을수 있도록 해주는 것이다.
+- "SET NULL"은 category가 null인 restaurant이 존재하게 함
+- category가 없는 restauant도 생성 가능하게 된다. (이런 기능을 front-end에서도 강제할 수 있게 된다.)
+- db로는 graphql을 nullable: true로 설정했기 때문에 restaurant이 category를 가져서는 안된다. (category를 지울 때, restaurant도 지워지지 않게 된다.)
+
+```
+  @Field((type) => User)
+  @ManyToOne((type) => User, (user) => user.restaurants)
+  owner: User;
+```
+
+- owner 지우면 restaurant도 지워지게 된다.
+- 모든 restaurant에 owner가 있기 때문에 필수이기 때문에 { nullable: true }를 빼준다.
+
+```
+@Field((type) => [Restaurant])
+  @OneToMany((type) => Restaurant, (restaurant) => restaurant.owner)
+  restaurants: Restaurant[];
+```
+
+- users.entity.ts에 owner가 많을 수도 있기 때문에 OneToMany를 써준다.
+- restaurant.owner로 바꿔준다.
+
+```
+  imports: [
+RestaurantsModule
+  ],
+```
+
+- restaurants.module.ts에 있는 RestaurantsModule을 app.module.ts에 RestaurantsModule을 넣어준다.
+- Error: Schema must contain uniquely named types but contains multiple types named "Category". 에러메시지가 발생한다.
+
+```
+@InputType('CategoryInputType', { isAbstract: true })
+```
+
+- resolve: app.module.ts에서 RestaurantsModule을 지우고 localhost graphql에서 schema를 보면 Category type은 모두 unique하고, 한 번 정의 되어야 한다. @InputType(), @ObjectType() 둘 다 만들고 있다.
+  restaurants.entity.ts에도 또 다른 Category field가 있다. InputType일지 ObjectType일지 구분이 가지 않는다.
+  그렇기 때문에 category.entity.ts에서 @InputType() 옵션을 보면 InputType(name: string, options?: InputTypeOptions) name을 가지는 것을 알 수 있다. 'CategoryInputType' 이름을 넣어주면 또 다른 곳에서 에러가 발생한다.
+
+- Error: Schema must contain uniquely named types but contains multiple types named "Restaurant". 에러메시지가 발생한다.
+
+```
+@InputType('RestaurantInputType', { isAbstract: true })
+
+```
+
+- resolve: db에 많은 relationship을 정의하지 않았다. restaurants.entity.ts에도 RestaurantInputType name을 만들어준다.
+- Error: Schema must contain uniquely named types but contains multiple types named "User". 에러메시지가 발생한다.
+
+```
+@InputType('UserInputType', { isAbstract: true })
+```
+
+- resolve: db에 많은 relationship을 정의하지 않았다. users.entity.ts에도 UserInputType name을 만들어준다.
+
+- abstract 타입이라서 shema에는 name이 보이지 않는데, 컴퓨터가 인식을 다르게 한다.
+- localhost graphql schema를 보면 InputType이 있는 것을 확인할 수 있다.
+
+```
+input CategoryInputType {
+  name: String!
+  coverImg: String!
+  restaurants: [RestaurantInputType!]!
+}
+```
+
+- CategoryInputType에서 restaurants이 필요하지 않기 때문에 input type에서 restaurants필드를 제거한다. category를 만들 때, 아무도 만들지 않을수도 있고 운영자만 만들수도 있다.
+
+```
+// get db for user
+type User {
+  id: Float!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  email: String!
+  password: String!
+  role: UserRole!
+  verified: Boolean!
+  restaurants: [Restaurant!]!
+}
+// input type user
+input UserInputType {
+  email: String!
+  password: String!
+  role: UserRole!
+  verified: Boolean!
+  restaurants: [RestaurantInputType!]!
+}
+```
+
+- db가 인식하는 User가 아닌, graphql과 db 모두 인식하는 User가 되었다.

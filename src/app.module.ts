@@ -68,6 +68,7 @@ import { Category } from './restaurants/entities/category.entity';
       domain: process.env.MAILGUN_DOMAIN,
     }),
     AuthModule,
+    RestaurantsModule,
   ],
   controllers: [],
   providers: [],

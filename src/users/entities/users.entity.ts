@@ -7,9 +7,10 @@ import {
 // jest는 CoreEntity 경로와 같은 형식이 되지 않는다.
 import { CoreEntity } from 'src/common/entities/core.entity';
 import * as bcrypt from 'bcrypt';
-import { BeforeInsert, BeforeUpdate, Column, Entity } from 'typeorm';
+import { BeforeInsert, BeforeUpdate, Column, Entity, OneToMany } from 'typeorm';
 import { InternalServerErrorException } from '@nestjs/common';
 import { IsString, IsBoolean, IsEmail, IsEnum } from 'class-validator';
+import { Restaurant } from 'src/restaurants/entities/restaurants.entity';
 
 enum UserRole {
   Client,
@@ -19,7 +20,7 @@ enum UserRole {
 
 registerEnumType(UserRole, { name: 'UserRole' });
 
-@InputType({ isAbstract: true })
+@InputType('UserInputType', { isAbstract: true })
 @ObjectType()
 @Entity()
 export class User extends CoreEntity {
@@ -47,6 +48,11 @@ export class User extends CoreEntity {
   // add users entity validation @IsBoolean
   @IsBoolean()
   verified: boolean;
+
+  // 하나의 category가 여러 restaurant(restaurants)를 가질 수 있다.
+  @Field((type) => [Restaurant])
+  @OneToMany((type) => Restaurant, (restaurant) => restaurant.owner)
+  restaurants: Restaurant[];
 
   @BeforeInsert()
   @BeforeUpdate()

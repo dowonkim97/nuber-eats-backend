@@ -4,7 +4,7 @@ import { CoreEntity } from 'src/common/entities/core.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Restaurant } from './restaurants.entity';
 
-@InputType({ isAbstract: true })
+@InputType('CategoryInputType', { isAbstract: true })
 @ObjectType() // graphQL을 위한 Category의 ObjectType
 @Entity()
 export class Category extends CoreEntity {
@@ -21,6 +21,7 @@ export class Category extends CoreEntity {
   @Column()
   @IsString()
   coverImg: string;
+
   // 하나의 category가 여러 restaurant(restaurants)를 가질 수 있다.
   // one-to-many relations
   // graphql Restaurant array
