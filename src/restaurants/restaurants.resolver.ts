@@ -1,6 +1,10 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CreateRestaurantDto } from './dtos/create-resturant.dto';
-import { UpdateRestaurantDto } from './dtos/update-restaurant.dto';
+import { AuthUser } from 'src/auth/auth-user.decorator';
+import { User } from 'src/users/entities/users.entity';
+import {
+  CreateRestaurantInput,
+  CreateRestaurantOutput,
+} from './dtos/create-resturant.dto';
 import { Restaurant } from './entities/restaurants.entity';
 import { RestaurantService } from './restaurants.service';
 
@@ -9,6 +13,8 @@ import { RestaurantService } from './restaurants.service';
 @Resolver((of) => Restaurant)
 export class RestaurantReslover {
   constructor(private readonly restaurantService: RestaurantService) {}
+
+  /*
   // Restaurant을 return(반환)한다.
   // GraphQL [Restaurant]
   @Query((returns) => [Restaurant])
@@ -17,8 +23,10 @@ export class RestaurantReslover {
   restaurants(): Promise<Restaurant[]> {
     // console.log(veganOnly);
     return this.restaurantService.getAll();
-  }
-  @Mutation((returns) => Boolean)
+  } 
+*/
+
+  @Mutation((returns) => CreateRestaurantOutput)
   async createRestaurant(
     /*
     @Args('name') name: string,
@@ -26,20 +34,19 @@ export class RestaurantReslover {
     @Args('address') address: string,
     @Args('ownerName') ownerName: string,
     */
-    @Args('input') createRestaurantDto: CreateRestaurantDto,
-  ): Promise<boolean> {
-    console.log(createRestaurantDto);
+    @AuthUser() authUser: User,
+    @Args('input') createRestaurantInput: CreateRestaurantInput,
+  ): Promise<CreateRestaurantOutput> {
+    console.log(createRestaurantInput);
     // console.log(createRestaurantInput);
     // console.log(createRestaurantDto);
-    try {
-      await this.restaurantService.createRestaurant(createRestaurantDto);
-      return true;
-    } catch (error) {
-      console.log(error);
-      return false;
-    }
+    return this.restaurantService.createRestaurant(
+      authUser,
+      createRestaurantInput,
+    );
   }
-  @Mutation((returns) => Boolean)
+  /*  
+ @Mutation((returns) => Boolean)
   async updateRestaurant(
     @Args('input') updateRestaurantDto: UpdateRestaurantDto,
   ): Promise<boolean> {
@@ -50,5 +57,6 @@ export class RestaurantReslover {
       console.log(e);
       return false;
     }
-  }
+  } 
+*/
 }

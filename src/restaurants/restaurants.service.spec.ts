@@ -29,30 +29,33 @@ describe('RestaurantService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
-  describe('getAll', () => {
-    it('아이디를 찾게 한다.', async () => {
-      restaurantsRepository.find.mockResolvedValue({
-        id: 1,
-      });
-      const result = await service.getAll();
-      expect(result).toMatchObject({
-        id: 1,
-      });
+  /*  
+    describe('getAll', () => {
+      it('아이디를 찾게 한다.', async () => {
+        restaurantsRepository.find.mockResolvedValue({
+          id: 1,
+        });
+        const result = await service.getAll();
+        expect(result).toMatchObject({
+          id: 1,
+        });
+      }); 
+    */
+  describe('createRestaurant', () => {
+    const restaurantArgs = {
+      name: 'kim',
+      isVegan: true,
+      address: '123',
+    };
+    it('레스토랑을 만들게 한다.', async () => {
+      restaurantsRepository.create.mockResolvedValue(restaurantArgs);
+      restaurantsRepository.save.mockResolvedValue(restaurantArgs);
+      // const result = await service.createRestaurant(restaurantArgs);
+      // expect(result).toMatchObject(restaurantArgs);
     });
-    describe('createRestaurant', () => {
-      const restaurantArgs = {
-        name: 'kim',
-        isVegan: true,
-        address: '123',
-      };
-      it('레스토랑을 만들게 한다.', async () => {
-        restaurantsRepository.create.mockResolvedValue(restaurantArgs);
-        restaurantsRepository.save.mockResolvedValue(restaurantArgs);
-        // const result = await service.createRestaurant(restaurantArgs);
-        // expect(result).toMatchObject(restaurantArgs);
-      });
-    });
-    describe('updateRestaurant', () => {
+  });
+  /*
+     describe('updateRestaurant', () => {
       it('레스토랑을 업데이트 한다.', async () => {
         const oldUser = {
           id: 0,
@@ -66,6 +69,8 @@ describe('RestaurantService', () => {
         const result = await service.updateRestaurant(newUser);
         expect(result).not.toBe(newUser);
       });
-    });
+
+    }); 
   });
+  */
 });

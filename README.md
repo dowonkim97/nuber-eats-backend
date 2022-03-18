@@ -8305,7 +8305,7 @@ export class User {
 - restaurants.entity.ts에서 category만 지워지게 해야 하기 때문에 category를 지울 때 restaurant을 지우면 안되기 때문에 nullable: true로 설정해준다.
 - nullable은 값형식의 데이터 타입에 Null 값을 넣을수 있도록 해주는 것이다.
 - "SET NULL"은 category가 null인 restaurant이 존재하게 함
-- category가 없는 restauant도 생성 가능하게 된다. (이런 기능을 front-end에서도 강제할 수 있게 된다.)
+- category가 없는 restaurant도 생성 가능하게 된다. (이런 기능을 front-end에서도 강제할 수 있게 된다.)
 - db로는 graphql을 nullable: true로 설정했기 때문에 restaurant이 category를 가져서는 안된다. (category를 지울 때, restaurant도 지워지지 않게 된다.)
 
 ```
@@ -8339,9 +8339,7 @@ RestaurantsModule
 @InputType('CategoryInputType', { isAbstract: true })
 ```
 
-- resolve: app.module.ts에서 RestaurantsModule을 지우고 localhost graphql에서 schema를 보면 Category type은 모두 unique하고, 한 번 정의 되어야 한다. @InputType(), @ObjectType() 둘 다 만들고 있다.
-  restaurants.entity.ts에도 또 다른 Category field가 있다. InputType일지 ObjectType일지 구분이 가지 않는다.
-  그렇기 때문에 category.entity.ts에서 @InputType() 옵션을 보면 InputType(name: string, options?: InputTypeOptions) name을 가지는 것을 알 수 있다. 'CategoryInputType' 이름을 넣어주면 또 다른 곳에서 에러가 발생한다.
+- resolve: app.module.ts에서 RestaurantsModule을 지우고 localhost graphql에서 schema를 보면 Category type은 모두 unique하고, 한 번 정의 되어야 한다. @InputType(), @ObjectType() 둘 다 만들고 있다. restaurants.entity.ts에도 또 다른 Category field가 있다. InputType일지 ObjectType일지 구분이 가지 않는다. 그렇기 때문에 category.entity.ts에서 @InputType() 옵션을 보면 InputType(name: string, options?: InputTypeOptions) name을 가지는 것을 알 수 있다. 'CategoryInputType' 이름을 넣어주면 또 다른 곳에서 에러가 발생한다.
 
 - Error: Schema must contain uniquely named types but contains multiple types named "Restaurant". 에러메시지가 발생한다.
 
@@ -8358,7 +8356,6 @@ RestaurantsModule
 ```
 
 - resolve: db에 많은 relationship을 정의하지 않았다. users.entity.ts에도 UserInputType name을 만들어준다.
-
 - abstract 타입이라서 shema에는 name이 보이지 않는데, 컴퓨터가 인식을 다르게 한다.
 - localhost graphql schema를 보면 InputType이 있는 것을 확인할 수 있다.
 
@@ -8395,3 +8392,215 @@ input UserInputType {
 ```
 
 - db가 인식하는 User가 아닌, graphql과 db 모두 인식하는 User가 되었다.
+
+# #10.2
+
+- create restaurants resolver를 작업한다.
+
+```
+/*
+  // Restaurant을 return(반환)한다.
+  // GraphQL [Restaurant]
+  @Query((returns) => [Restaurant])
+  // 타입스크립트 Restaurant[]
+  // @Args('veganOnly')는 GraphQL,  veganOnly는 function
+  restaurants(): Promise<Restaurant[]> {
+    // console.log(veganOnly);
+    return this.restaurantService.getAll();
+  }
+*/
+  /*
+ @Mutation((returns) => Boolean)
+  async updateRestaurant(
+    @Args('input') updateRestaurantDto: UpdateRestaurantDto,
+  ): Promise<boolean> {
+    try {
+      await this.restaurantService.updateRestaurant(updateRestaurantDto);
+      return true;
+    } catch (e) {
+      console.log(e);
+      return false;
+    }
+  }
+*/
+```
+
+- restaurants.resolver.ts에서 create restaurant resolver를 제외한 나머지는 모두 지워준다.
+
+```
+@Injectable()
+export class RestaurantService {
+  constructor(
+    @InjectRepository(Restaurant)
+    private readonly restaurants: Repository<Restaurant>,
+  ) {}
+  /*
+    getAll(): Promise<Restaurant[]> {
+    return this.restaurants.find(); //실제로 DB에 접근하는 방식
+  }
+  */
+  createRestaurant(
+    createRestaurantDto: CreateRestaurantDto,
+  ): Promise<Restaurant> {
+    const newRestaurant = this.restaurants.create(createRestaurantDto);
+    return this.restaurants.save(newRestaurant);
+  }
+  /*
+    updateRestaurant({ id, data }: UpdateRestaurantDto) {
+    this.restaurants.update(id, { ...data });
+  }
+  */
+}
+
+```
+
+- restaurants.service.ts도 create restaurant resolver 와 같이 비슷하게 지워준다.
+
+```
+import { ArgsType, Field, InputType, PartialType } from '@nestjs/graphql';
+import { CreateRestaurantDto } from './create-resturant.dto';
+
+@InputType()
+class UpdateRestaurantInputType extends PartialType(CreateRestaurantDto) {}
+
+@InputType()
+export class UpdateRestaurantDto {
+  @Field((type) => Number) id: number;
+
+  @Field((type) => UpdateRestaurantInputType) data: UpdateRestaurantInputType;
+}
+```
+
+- createRestaurant은 Boolean으로 return 하지 않을 것이다. 그래서 위에 있는 update-restaurant.dto.ts 파일을 지워준다.
+
+```
+export class createRestaurantInput extends OmitType(Restaurant, ['id']) {}
+```
+
+- create-resturant.dto.ts에서 CreateRestaurantDto를 지우고, createRestaurantInput을 넣는다.
+- target: create-account.dto.ts에서 createRestaurantInput을 정의하고, createAccountOutput처럼 createRestaurantOutput을 정의한다.
+
+```
+@ObjectType()
+export class createRestaurantOutput extends CoreOutput {}
+```
+
+- create-resturant.dto.ts에 Output도 만들어준다. coreOutput에는 error, ok가 있다.
+- restaurants.entity.ts파일에서 category를 보면 사람들이 category가 있는 restaurant를 만들지 못하게 해야 한다.
+
+```
+@InputType()
+export class createRestaurantInput extends OmitType(Restaurant, [
+  'id',
+  'category',
+]) {}
+```
+
+- create-resturant.dto.ts파일에서 그렇기 때문에 OmitType으로 category를 제거해준다.
+
+```
+
+  @Mutation((returns) => createRestaurantOutput)
+  async createRestaurant(
+    @Args('input') createRestaurantInput: createRestaurantInput,
+  ): Promise<createRestaurantOutput> {
+    console.log(createRestaurantInput);
+    // console.log(createRestaurantInput);
+    // console.log(createRestaurantDto);
+    try {
+      await this.restaurantService.createRestaurant(createRestaurantInput);
+      return true;
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  }
+```
+
+- restaurants.resolver.ts에서 createRestaurantDto를 createRestaurantInput으로 fix, Boolean을 createRestaurantOutput으로 fixed.
+
+```
+@Injectable()
+export class RestaurantService {
+  constructor(
+    @InjectRepository(Restaurant)
+    private readonly restaurants: Repository<Restaurant>,
+  ) {}
+  createRestaurant(
+    createRestaurantInput: createRestaurantInput,
+  ): Promise<CreateRestaurantOutput> {
+    const newRestaurant = this.restaurants.create(createRestaurantInput);
+    return this.restaurants.save(newRestaurant);
+  }
+```
+
+- restaurants.service.ts에서 createRestaurantDto를 createRestaurantInput으로 fix, Restaurant을 CreateRestaurantOutput로 fixed.
+
+```
+@InputType()
+export class CreateRestaurantInput extends OmitType(Restaurant, [
+  'id',
+  'category',
+  'owner',
+]) {}
+
+```
+
+- restaurants.service.ts에서 user를 가지고 있는 restaurant를 생성할 수 있다. createRestaurantInput에서 restaurant의 owner를 설정할 수 없게 제외시킨다.
+
+```
+@AuthUser() authUser: User
+```
+
+- users.resolver.ts에서 위 코드로 로그인한 유저를 get 할 수 있다. restaurant의 owner를 로그인한 유저에게 받는다.
+
+```
+async createRestaurant(
+    @AuthUser() authUser: User,
+)
+```
+
+- users.resolver.ts에서 restaurant의 owner는 로그인한 유저가 된다.
+
+```
+  createRestaurant(
+    owner: User,
+  ):
+```
+
+- restaurants.service.ts에서 service에 필요한 owner: User를 추가해준다.
+
+```
+ return this.restaurantService.createRestaurant(
+      authUser,
+      createRestaurantInput,
+    );
+```
+
+- users.resolver.ts에서 authUser를 추가해준다.
+
+- 사람들이 graphql을 이용해 owner가 있는 restaurant를 만들게 하고 싶지는 않기 때문에 owner는 authorization 모듈에서 가져온다.
+
+```
+ async createRestaurant(
+    // User인 owner가 need createRestaurant service
+    owner: User,
+    createRestaurantInput: CreateRestaurantInput,
+  ): Promise<CreateRestaurantOutput> {
+    try {
+      const newRestaurant = this.restaurants.create(createRestaurantInput);
+      await this.restaurants.save(newRestaurant);
+      return {
+        ok: true,
+      };
+    } catch {
+      return {
+        ok: false,
+        error: '레스토랑을 만들 수 없습니다.',
+      };
+    }
+  }
+```
+
+- restaurants.service.ts에서 async/await, try/catch 처리
+- user를 포함한 restaurant를 만들고, category 이름이나 category id를 보내서 사용해야 한다. 추후에 createdAt, updatedAt은 삭제해준다.
